@@ -1,0 +1,12 @@
+# Keeps the build context small. Every `target` directory is a Cargo build cache, and the
+# frontend, its dependencies and the docs are not needed to build the server.
+.git
+**/target
+**/node_modules
+dist
+**/dist
+.claude
+docs
+public
+src
+*.md

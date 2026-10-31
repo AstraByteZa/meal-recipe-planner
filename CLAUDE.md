@@ -11,12 +11,16 @@ Package manager is pnpm (`pnpm-lock.yaml`).
 - `pnpm test` — runs the Vitest suite (`vitest run`). Test files are `*.test.ts` next to the code they cover. v1 tests pure logic in the Node environment, with no DOM libraries.
 - `pnpm preview` — serve the built frontend.
 - `pnpm tauri dev` / `pnpm tauri build` — run or bundle the desktop app. Tauri runs `pnpm dev` / `pnpm build` itself via `src-tauri/tauri.conf.json`.
+- `cargo test` (from the repo root) — runs every Rust crate. The sync server's integration tests need Postgres: set `TEST_DATABASE_URL=postgres://user:pass@host:port/postgres`. Each test creates its own `sync_test_*` database. Without the variable they are skipped, not failed. `cargo test -p planner-app` runs only the desktop client.
+- `cargo run -p sync-server` — runs the sync server locally. It needs `DATABASE_URL` and `JWT_SECRET` (at least 32 bytes). `docker compose -f sync-server/docker-compose.yml up --build` runs it with Postgres. Deployment is in `docs/deploy-dokploy.md`.
 
 To run a single frontend test file, use `pnpm test <path>` (for example `pnpm test src/features/recipes/cook/steps.test.ts`).
 
 ## Architecture
 
 This is a Tauri v2 desktop app: a React + TypeScript frontend in `src/` rendered in a webview, and a thin Rust backend in `src-tauri/`.
+
+The repo is a Cargo workspace (root `Cargo.toml`, no root package). Members: `src-tauri` (the app, package `planner-app`), `shared-core` (sync wire types, LWW, deterministic ids; no tauri or sqlx), and `sync-server` (Axum and Postgres). Build output goes to the root `target/`. Old `src-tauri/target/` directories are stale and can be deleted.
 
 **Frontend bootstrap.** `src/main.tsx` mounts the app with a Mantine theme (custom `myColor` palette, dark color scheme by default) and the TanStack Router. Mantine CSS imports are order-sensitive: the `@mantine/schedule` styles must come after core and dates.
 
@@ -26,7 +30,16 @@ This is a Tauri v2 desktop app: a React + TypeScript frontend in `src/` rendered
 
 **Dates.** Use `src/lib/dayjs.ts` rather than importing `dayjs` directly. It registers the `isoWeek` plugin, which the planner depends on for week boundaries.
 
-**Backend.** `src-tauri/src/lib.rs` builds the app, opens the database in `setup`, and registers `tauri-plugin-opener` and the commands. Commands live in `commands.rs` as thin wrappers over `repo/` (SQL, one module per feature). `db.rs` opens SQLite at `app_data_dir/planner.db` with a `SqlitePool` (sqlx, no ORM) and runs `src-tauri/migrations/*.sql`. Add a migration as a new numbered file; never edit an applied one. Errors go through `AppError` in `error.rs`. A recipe saved by name only has empty `url` and `source_domain` (not NULL). Do not rebuild the `recipes` table to make them nullable: with foreign keys on, dropping it cascades into `schedule_entries` and `recipe_tags`. Tests are in-module `#[cfg(test)]` blocks using `db::test_pool()` (in-memory); run with `cargo test` in `src-tauri/`. The template `greet` command is only used by `src/App.tsx`, which is dead code not imported by `main.tsx`. Capabilities (permissions the webview may use) are declared in `src-tauri/capabilities/default.json`; a new plugin or core API needs a permission there as well as in `Cargo.toml` and `lib.rs`.
+**Backend.** `src-tauri/src/lib.rs` builds the app, opens the database in `setup`, and registers `tauri-plugin-opener` and the commands. Commands live in `commands.rs` as thin wrappers over `repo/` (SQL, one module per feature). `db.rs` opens SQLite at `app_data_dir/planner.db` with a `SqlitePool` (sqlx, no ORM) and runs `src-tauri/migrations/*.sql`. Add a migration as a new numbered file; never edit an applied one. Errors go through `AppError` in `error.rs`. A recipe saved by name only has empty `url` and `source_domain` (not NULL). Do not rebuild the `recipes` table to make them nullable: with foreign keys on, dropping it cascades into `schedule_entries` and `recipe_tags`. Tests are in-module `#[cfg(test)]` blocks using `db::test_pool()` (in-memory); run with `cargo test -p planner-app`. The template `greet` command is only used by `src/App.tsx`, which is dead code not imported by `main.tsx`. Capabilities (permissions the webview may use) are declared in `src-tauri/capabilities/default.json`; a new plugin or core API needs a permission there as well as in `Cargo.toml` and `lib.rs`.
+
+**Sync.** Each device keeps its own SQLite database and syncs through `sync-server`.
+
+- **Soft delete.** Never `DELETE` a synced row (tracks, tags, recipes, recipe_tags, schedule_entries, settings, household_diets, config). Set `deleted_at` and `updated_at` instead, and filter every read with `deleted_at IS NULL`. Cascades are explicit in the repo layer: deleting a recipe soft-deletes its schedule entries and tag links, because a soft-deleted parent triggers no FK cascade.
+- **Outbox.** Every write to a synced row calls `sync::outbox::record` in the same transaction, so the change is saved and queued together. `record` snapshots the row from the database. Device-only columns (`image_path`, `settings.onboarded`) are left out of the payload.
+- **Ids.** Synced ids are UUID text. Tags, recipe-tag links, schedule slots, config keys and diets use deterministic UUIDv5 ids (`shared-core/src/ids.rs`), so two devices creating the same row merge instead of duplicating. Changing a name format orphans existing rows, and the tests pin the current values.
+- **Conflicts.** Last-write-wins on `updated_at`, with ties going to the larger client id (`shared-core/src/lww.rs`). Every write must set `updated_at` through `repo::now`. A pulled change never overwrites a newer local row or a newer queued edit.
+- **Client worker.** `src-tauri/src/sync/worker.rs` pushes queued changes, pulls from `last_seq` in `sync_meta`, and listens on `/sync/stream`. After pulled changes land it emits `sync://changed`, and the frontend invalidates its queries on it. A pulled op that breaks a constraint on this device is logged and skipped, so one row cannot block a page.
+- **Server.** Accepted changes are stored in `entities` and appended to `op_log`, and pull reads `op_log`. Private rows are visible to their owner only; family rows to members. Wire types live in `shared-core/src/wire.rs` and are shared by both sides, so change them there. Server migrations are in `sync-server/migrations/`.
 
 **Styling.** Mantine components with `*.module.css` files alongside components. `postcss.config.cjs` applies `postcss-preset-mantine` and defines the Mantine breakpoint variables.
 

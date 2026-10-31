@@ -1,0 +1,38 @@
+# Local development: the sync server with a Postgres database. From the repository root:
+#
+#   JWT_SECRET=$(openssl rand -base64 48) docker compose -f sync-server/docker-compose.yml up --build
+#
+# The database password below is for local use only. Do not reuse it on a server.
+name: planner-sync
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: planner
+      POSTGRES_PASSWORD: planner
+      POSTGRES_DB: planner_sync
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planner -d planner_sync"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build:
+      context: ..
+      dockerfile: sync-server/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://planner:planner@db:5432/planner_sync
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET to at least 32 bytes}
+      REGISTRATION_OPEN: "true"
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:
