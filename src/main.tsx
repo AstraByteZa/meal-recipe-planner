@@ -12,6 +12,7 @@ import { router } from "./router";
 import { queryClient } from "./lib/queryClient";
 import { createTheme, MantineColorsTuple, MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
+import { listen } from "@tauri-apps/api/event";
 import { Notifications } from "@mantine/notifications";
 import { plannerModals } from "./features/planner/modals/registry";
 
@@ -61,6 +62,9 @@ const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error("No root element to mount to!");
 
 if (!rootElement.innerHTML) {
+  // The sync worker emits this after pulled changes are applied to the local database.
+  void listen("sync://changed", () => queryClient.invalidateQueries());
+
   const root = ReactDOM.createRoot(rootElement)
   root.render(
 		<StrictMode>

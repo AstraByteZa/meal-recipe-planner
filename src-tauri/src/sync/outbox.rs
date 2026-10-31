@@ -1,9 +1,11 @@
 //! Local change log. Every repo write that changes a synced row calls `record` in the same
 //! transaction, so a change is either saved and queued, or not saved at all.
 
-use sqlx::SqliteConnection;
+use sqlx::types::Json;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use shared_core::entity::{EntityType, Operation};
+use shared_core::lww::lww_wins;
 
 use crate::error::AppError;
 
@@ -52,6 +54,112 @@ pub async fn record_all(
         record(conn, entity, id, operation).await?;
     }
     Ok(())
+}
+
+/// A queued change, as the worker reads it to build a push.
+#[derive(Debug, sqlx::FromRow)]
+pub struct Pending {
+    pub id: i64,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub operation: String,
+    pub payload: String,
+    pub client_timestamp: String,
+}
+
+/// Marks up to `limit` pending changes as in flight and returns them in queue order.
+pub async fn take_batch(pool: &SqlitePool, limit: i64) -> Result<Vec<Pending>, AppError> {
+    let mut rows: Vec<Pending> = sqlx::query_as(
+        "UPDATE outbox_queue SET status = 'syncing'
+         WHERE id IN (SELECT id FROM outbox_queue WHERE status = 'pending' ORDER BY id LIMIT ?)
+         RETURNING id, entity_type, entity_id, operation, payload, client_timestamp",
+    )
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+    rows.sort_by_key(|row| row.id);
+    Ok(rows)
+}
+
+/// Removes changes the server has answered for (applied, stale or rejected).
+pub async fn finish(pool: &SqlitePool, ids: &[i64]) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM outbox_queue WHERE id IN (SELECT value FROM json_each(?))")
+        .bind(Json(ids))
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Parks changes the server refused for the request as a whole. They are not retried.
+pub async fn mark_failed(pool: &SqlitePool, ids: &[i64]) -> Result<(), AppError> {
+    sqlx::query("UPDATE outbox_queue SET status = 'failed' WHERE id IN (SELECT value FROM json_each(?))")
+        .bind(Json(ids))
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Returns in-flight changes to the queue after a failed push. A change that has a newer pending
+/// edit for the same row is dropped, because that edit carries the whole row and the pending
+/// index allows only one pending row per entity.
+pub async fn requeue_in_flight(pool: &SqlitePool) -> Result<(), AppError> {
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "DELETE FROM outbox_queue WHERE status = 'syncing' AND EXISTS (
+             SELECT 1 FROM outbox_queue newer
+             WHERE newer.status = 'pending'
+               AND newer.entity_type = outbox_queue.entity_type
+               AND newer.entity_id = outbox_queue.entity_id)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("UPDATE outbox_queue SET status = 'pending' WHERE status = 'syncing'")
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn pending_count(pool: &SqlitePool) -> Result<i64, AppError> {
+    let count = sqlx::query_scalar("SELECT COUNT(*) FROM outbox_queue WHERE status = 'pending'")
+        .fetch_one(pool)
+        .await?;
+    Ok(count)
+}
+
+/// Decides whether a pulled change may overwrite a row that has local changes waiting in the
+/// queue. If a queued change is newer, it keeps the row and this returns false. Otherwise the
+/// queued changes for the row are superseded and removed, and this returns true.
+pub async fn claim_entity(
+    conn: &mut SqliteConnection,
+    entity: EntityType,
+    id: &str,
+    incoming_ts: &str,
+    incoming_client: &str,
+    local_client: &str,
+) -> Result<bool, AppError> {
+    let queued: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT id, client_timestamp FROM outbox_queue
+         WHERE entity_type = ? AND entity_id = ? AND status != 'failed'",
+    )
+    .bind(entity.as_str())
+    .bind(id)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let local_wins = queued
+        .iter()
+        .any(|(_, ts)| !lww_wins(incoming_ts, incoming_client, ts, local_client));
+    if local_wins {
+        return Ok(false);
+    }
+    for (queue_id, _) in queued {
+        sqlx::query("DELETE FROM outbox_queue WHERE id = ?")
+            .bind(queue_id)
+            .execute(&mut *conn)
+            .await?;
+    }
+    Ok(true)
 }
 
 /// The row as it goes over the wire, with `updated_at` first (it is the change's timestamp).

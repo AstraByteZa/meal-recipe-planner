@@ -21,8 +21,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let pool = tauri::async_runtime::block_on(db::init(app.handle()))?;
-            app.manage(pool);
+            let sync = sync::SyncHandle::default();
+            app.manage(pool.clone());
+            app.manage(sync.clone());
             app.manage(keep_awake::KeepAwakeLock::default());
+            sync::worker::spawn(app.handle().clone(), pool, sync);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -44,6 +47,13 @@ pub fn run() {
             commands::config_list,
             commands::config_set,
             commands::keep_awake_set,
+            commands::sync_status,
+            commands::sync_register,
+            commands::sync_login,
+            commands::sync_logout,
+            commands::sync_now,
+            commands::family_create,
+            commands::family_join,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2,6 +2,7 @@ import { IconCalendarWeek, IconCircleDot, IconLink, IconSearch } from '@tabler/i
 import { Box, Code, Text, TextInput } from '@mantine/core';
 import { Link } from '@tanstack/react-router';
 import { WeekProgress } from '../../features/planner/components/WeekProgress';
+import { SyncButton } from '../../features/sync/components/SyncButton';
 import classes from './NavbarSearch.module.css';
 
 const links: { icon: typeof IconCalendarWeek; label: string; to: '/' | '/recipes' }[] = [
@@ -46,6 +47,7 @@ export function NavbarSearch() {
       <div className={classes.mainLinks}>{mainLinks}</div>
 
       <div className={classes.footer}>
+        <SyncButton />
         <WeekProgress />
       </div>
     </nav>
