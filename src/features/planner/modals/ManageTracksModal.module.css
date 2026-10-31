@@ -1,0 +1,121 @@
+/* Column widths for the whole editor, so every row and heading shares them. */
+.editor {
+	--handle-width: 28px;
+	--swatch-width: 12px;
+	--show-width: 44px;
+}
+
+/*
+ * Shared column layout for the header row and every track card. The widths are fixed
+ * so the headings line up with the controls below them. Each card has a 1px border.
+ */
+.columnHeaders,
+.mainLine {
+	display: grid;
+	grid-template-columns: var(--handle-width) var(--swatch-width) minmax(0, 1fr) 110px var(--show-width) 28px;
+	align-items: center;
+	column-gap: var(--mantine-spacing-sm);
+}
+
+.columnHeaders {
+	padding: 0 calc(var(--mantine-spacing-md) + 1px);
+}
+
+/* Lines up with the text inside the name input. */
+.nameHeading {
+	padding-left: var(--mantine-spacing-md);
+}
+
+.showHeading {
+	text-align: center;
+}
+
+.showCell {
+	display: grid;
+	justify-items: center;
+}
+
+.track {
+	padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+	border: 1px solid var(--mantine-color-dark-4);
+	border-radius: var(--mantine-radius-md);
+	background: var(--mantine-color-dark-6);
+}
+
+.trackExpanded {
+	border-color: var(--mantine-primary-color-filled);
+}
+
+.handle {
+	cursor: grab;
+}
+
+.time {
+	width: 110px;
+}
+
+/* Indented to line up with the track name. */
+.details {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-md);
+	margin-top: var(--mantine-spacing-md);
+	padding-left: calc(var(--handle-width) + var(--swatch-width) + var(--mantine-spacing-sm) * 2);
+}
+
+.sectionLabel {
+	display: block;
+	margin-bottom: var(--mantine-spacing-xs);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.swatch,
+.swatchSelected {
+	cursor: pointer;
+}
+
+.swatchSelected {
+	outline: 2px solid var(--mantine-color-text);
+	outline-offset: 2px;
+}
+
+.day,
+.dayOn {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--mantine-radius-sm);
+	border: 1px solid var(--mantine-color-dark-3);
+	font-size: var(--mantine-font-size-sm);
+	font-weight: 600;
+}
+
+.day {
+	color: var(--mantine-color-dimmed);
+	background: var(--mantine-color-dark-5);
+}
+
+.dayOn {
+	color: var(--mantine-color-dark-9);
+	background: var(--mantine-primary-color-filled);
+	border-color: var(--mantine-primary-color-filled);
+}
+
+.addTrack {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--mantine-spacing-xs);
+	width: 100%;
+	padding: var(--mantine-spacing-sm);
+	border: 1px dashed var(--mantine-color-dark-3);
+	border-radius: var(--mantine-radius-md);
+	color: var(--mantine-color-dimmed);
+}
+
+.footer {
+	padding-top: var(--mantine-spacing-md);
+	border-top: 1px solid var(--mantine-color-dark-4);
+}

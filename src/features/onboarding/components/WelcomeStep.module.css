@@ -1,0 +1,26 @@
+.feature {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-md);
+	padding: var(--mantine-spacing-md) var(--mantine-spacing-lg);
+	border-radius: var(--mantine-radius-lg);
+	background-color: var(--mantine-color-dark-5);
+	border: 1px solid var(--mantine-color-dark-4);
+}
+
+.icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 40px;
+	height: 40px;
+	border-radius: var(--mantine-radius-md);
+	background-color: var(--mantine-color-dark-4);
+	color: var(--mantine-primary-color-filled);
+}
+
+.text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}

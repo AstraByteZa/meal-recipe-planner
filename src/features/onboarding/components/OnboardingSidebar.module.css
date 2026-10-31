@@ -1,0 +1,102 @@
+.sidebar {
+	width: 340px;
+	flex: 0 0 340px;
+	min-height: 100vh;
+	padding: var(--mantine-spacing-xl);
+	display: flex;
+	flex-direction: column;
+	background-color: var(--mantine-color-dark-8);
+	border-right: 1px solid var(--mantine-color-dark-5);
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-xs);
+}
+
+.logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--mantine-radius-sm);
+	background-color: var(--mantine-primary-color-filled);
+	color: var(--mantine-color-black);
+}
+
+.steps {
+	margin: var(--mantine-spacing-xl) 0 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-xs);
+}
+
+.step {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-sm);
+	padding: 0;
+	text-align: left;
+	color: var(--mantine-color-dark-2);
+}
+
+.stepDone {
+	cursor: pointer;
+
+	&:hover .title {
+		color: var(--mantine-color-dark-0);
+	}
+}
+
+.stepCurrent .title {
+	color: var(--mantine-color-dark-0);
+}
+
+.marker {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 32px;
+	height: 32px;
+	border-radius: 50%;
+	border: 1px solid var(--mantine-color-dark-3);
+	font-size: var(--mantine-font-size-sm);
+	color: var(--mantine-color-dark-2);
+}
+
+.stepCurrent .marker {
+	border-color: var(--mantine-primary-color-filled);
+	color: var(--mantine-primary-color-filled);
+}
+
+.stepDone .marker {
+	border-color: var(--mantine-primary-color-filled);
+	background-color: var(--mantine-primary-color-filled);
+	color: var(--mantine-color-black);
+}
+
+.text {
+	display: flex;
+	flex-direction: column;
+}
+
+.title {
+	font-size: var(--mantine-font-size-md);
+	font-weight: 500;
+	color: var(--mantine-color-dark-1);
+}
+
+.subtitle {
+	font-size: var(--mantine-font-size-xs);
+	color: var(--mantine-color-dark-2);
+}
+
+.footnote {
+	margin-top: auto;
+	padding-top: var(--mantine-spacing-md);
+}

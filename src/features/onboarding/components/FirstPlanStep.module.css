@@ -1,0 +1,61 @@
+.board {
+	padding: var(--mantine-spacing-md);
+	border-radius: var(--mantine-radius-lg);
+	background-color: var(--mantine-color-dark-5);
+	border: 1px solid var(--mantine-color-dark-4);
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: 96px repeat(7, minmax(0, 1fr));
+	align-items: center;
+	gap: var(--mantine-spacing-xs);
+}
+
+.trackLabel {
+	letter-spacing: 0.06em;
+}
+
+.slotEmpty,
+.slotFilled,
+.slotOff {
+	height: 48px;
+	border-radius: var(--mantine-radius-md);
+}
+
+.slotEmpty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px dashed var(--mantine-color-dark-3);
+	color: var(--mantine-color-dark-2);
+
+	&:hover {
+		border-color: var(--mantine-primary-color-filled);
+		color: var(--mantine-primary-color-filled);
+	}
+}
+
+.slotFilled {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	border: 1px solid var(--mantine-primary-color-filled);
+	background-color: var(--mantine-primary-color-light);
+	font-size: var(--mantine-font-size-xs);
+	line-height: 1.2;
+	text-align: center;
+	color: var(--mantine-color-dark-0);
+}
+
+.mealName {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.slotOff {
+	border: 1px solid transparent;
+}

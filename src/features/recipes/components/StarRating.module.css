@@ -1,0 +1,14 @@
+.starOn {
+	color: var(--mantine-color-yellow-5);
+}
+
+.starOff {
+	color: var(--mantine-color-dimmed);
+}
+
+.inputStar {
+	display: grid;
+	place-items: center;
+	border-radius: var(--mantine-radius-sm);
+	cursor: pointer;
+}

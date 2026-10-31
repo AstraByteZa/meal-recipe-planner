@@ -1,0 +1,21 @@
+.intro {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-xs);
+}
+
+.eyebrow {
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: var(--mantine-font-size-xs);
+}
+
+.title {
+	font-size: 2.25rem;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+}
+
+.description {
+	font-size: var(--mantine-font-size-md);
+}

@@ -1,0 +1,8 @@
+.footer {
+	margin-top: auto;
+	padding-top: var(--mantine-spacing-md);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--mantine-spacing-md);
+}

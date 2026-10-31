@@ -1,0 +1,19 @@
+.panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-md);
+}
+
+.label {
+	color: var(--mantine-primary-color-filled);
+	font-size: var(--mantine-font-size-xs);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.text {
+	font-size: calc(var(--mantine-font-size-xl) * var(--cook-text-scale, 1));
+	font-weight: 600;
+	line-height: 1.35;
+}

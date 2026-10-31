@@ -1,0 +1,17 @@
+.panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-lg);
+	padding: var(--mantine-spacing-lg);
+	border-radius: var(--mantine-radius-lg);
+	background-color: var(--mantine-color-dark-5);
+	border: 1px solid var(--mantine-color-dark-4);
+}
+
+.label {
+	color: var(--mantine-primary-color-filled);
+	font-size: var(--mantine-font-size-xs);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}

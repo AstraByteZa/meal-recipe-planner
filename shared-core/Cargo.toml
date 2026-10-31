@@ -1,0 +1,14 @@
+[package]
+name = "shared-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Types and rules shared by the Tauri client and the sync server. No tauri or sqlx here,
+# so the server can depend on it without pulling in the desktop stack.
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

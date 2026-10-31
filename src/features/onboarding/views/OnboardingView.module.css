@@ -1,0 +1,22 @@
+.view {
+	flex: 1;
+	min-width: 0;
+	min-height: 100vh;
+	display: flex;
+}
+
+.main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	justify-content: center;
+	padding: 64px var(--mantine-spacing-xl) var(--mantine-spacing-xl);
+}
+
+.column {
+	width: 100%;
+	max-width: 640px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-xl);
+}

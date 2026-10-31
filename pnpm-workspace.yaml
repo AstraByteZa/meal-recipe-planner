@@ -1,0 +1,8 @@
+skills:
+  dirs:
+    - .claude/skills
+
+permissions:
+  '@tanstack/router-plugin':
+    build: true
+    skills: true

@@ -1,0 +1,73 @@
+.table {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-xs);
+}
+
+.headerRow,
+.row {
+	display: grid;
+	grid-template-columns: minmax(220px, 2.2fr) minmax(140px, 1.4fr) 130px minmax(150px, 1.5fr) 80px 48px;
+	align-items: center;
+	gap: var(--mantine-spacing-md);
+	padding: 0 var(--mantine-spacing-md);
+}
+
+.headerRow {
+	padding-bottom: var(--mantine-spacing-xs);
+}
+
+.headerCell {
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: var(--mantine-font-size-xs);
+}
+
+.row {
+	min-height: 64px;
+	border-radius: var(--mantine-radius-md);
+	background-color: light-dark(var(--mantine-color-white), var(--mantine-color-dark-5));
+	border: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+}
+
+.recipe {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-md);
+	min-width: 0;
+}
+
+/* The recipe cell links to the detail view. */
+.recipeLink {
+	color: inherit;
+	text-decoration: none;
+
+	&:hover .recipeName {
+		color: var(--mantine-primary-color-filled);
+	}
+}
+
+.recipeName {
+	transition: color 120ms ease;
+}
+
+.recipeText {
+	min-width: 0;
+}
+
+.avatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 36px;
+	height: 36px;
+	border-radius: var(--mantine-radius-md);
+	background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-4));
+	color: var(--mantine-primary-color-filled);
+	font-weight: 700;
+}
+
+.empty {
+	padding: var(--mantine-spacing-xl) 0;
+	text-align: center;
+}

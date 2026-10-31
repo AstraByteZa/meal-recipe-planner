@@ -1,0 +1,31 @@
+.view {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-xl);
+	padding: var(--mantine-spacing-xl);
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--mantine-spacing-md);
+}
+
+.eyebrow {
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: var(--mantine-font-size-xs);
+}
+
+.lower {
+	display: grid;
+	grid-template-columns: 1.15fr 1fr;
+	gap: var(--mantine-spacing-md);
+
+	@media (max-width: $mantine-breakpoint-md) {
+		grid-template-columns: 1fr;
+	}
+}

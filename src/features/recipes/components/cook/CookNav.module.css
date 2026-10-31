@@ -1,0 +1,8 @@
+.nav {
+	display: flex;
+	gap: var(--mantine-spacing-md);
+}
+
+.next {
+	flex: 1;
+}

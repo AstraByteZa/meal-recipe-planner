@@ -1,0 +1,36 @@
+.panel {
+	padding: var(--mantine-spacing-lg);
+	border-radius: var(--mantine-radius-lg);
+	background-color: var(--mantine-color-dark-5);
+	border: 1px solid var(--mantine-color-dark-4);
+}
+
+.header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-bottom: var(--mantine-spacing-md);
+}
+
+.title {
+	font-size: var(--mantine-font-size-lg);
+	font-weight: 600;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-md);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ingredient {
+	font-size: calc(var(--mantine-font-size-md) * var(--cook-text-scale, 1));
+}
+
+.used {
+	color: var(--mantine-color-dimmed);
+	text-decoration: line-through;
+}

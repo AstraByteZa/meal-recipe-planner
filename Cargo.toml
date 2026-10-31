@@ -1,0 +1,17 @@
+[workspace]
+members = ["src-tauri", "shared-core"]
+resolver = "3"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "v5"] }
+
+# Profiles only apply from the workspace root, so the release settings live here.
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
