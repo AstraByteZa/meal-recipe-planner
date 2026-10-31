@@ -1,12 +1,17 @@
 use std::sync::Mutex;
 
-use keepawake::KeepAwake;
-
 use crate::error::AppError;
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+type Inhibitor = keepawake::KeepAwake;
+
+/// Phones and tablets have no inhibitor wired up, so cook mode leaves the screen alone there.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+type Inhibitor = ();
 
 /// Holds the OS inhibitor that keeps the screen on while cook mode is open. Dropping the inhibitor releases it.
 #[derive(Default)]
-pub struct KeepAwakeLock(Mutex<Option<KeepAwake>>);
+pub struct KeepAwakeLock(Mutex<Option<Inhibitor>>);
 
 impl KeepAwakeLock {
     /// Turns the inhibitor on or off. Turning it on while it is already on keeps the existing one.
@@ -19,14 +24,7 @@ impl KeepAwakeLock {
         if held.is_some() {
             return Ok(());
         }
-        let awake = keepawake::Builder::default()
-            .display(true)
-            .reason("Cooking a recipe")
-            .app_name("Mise")
-            .app_reverse_domain("com.roelof.planner-app")
-            .create()
-            .map_err(|error| AppError::Platform(format!("Could not keep the screen awake: {error}")))?;
-        *held = Some(awake);
+        *held = Some(acquire()?);
         Ok(())
     }
 
@@ -34,6 +32,22 @@ impl KeepAwakeLock {
     fn is_held(&self) -> bool {
         self.0.lock().unwrap().is_some()
     }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn acquire() -> Result<Inhibitor, AppError> {
+    keepawake::Builder::default()
+        .display(true)
+        .reason("Cooking a recipe")
+        .app_name("Mise")
+        .app_reverse_domain("com.roelof.planner-app")
+        .create()
+        .map_err(|error| AppError::Platform(format!("Could not keep the screen awake: {error}")))
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn acquire() -> Result<Inhibitor, AppError> {
+    Ok(())
 }
 
 #[cfg(test)]

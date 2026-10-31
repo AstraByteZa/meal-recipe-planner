@@ -1,7 +1,9 @@
 name: Release
 
-# Builds the Linux and Windows apps. Push a version tag (for example v0.1.0) to publish a draft release,
-# or run the workflow by hand to build the artifacts without tagging.
+# Builds the apps for Linux, Windows, Android and iOS. Push a version tag (for example v0.1.0) to
+# publish a draft release, or run the workflow by hand to build the artifacts without tagging.
+# The Android and iOS jobs skip themselves until their generated project folder (src-tauri/gen)
+# is committed. Create it with `pnpm tauri android init` and `pnpm tauri ios init`.
 on:
   push:
     tags:
@@ -56,3 +58,125 @@ jobs:
           releaseBody: "Draft release. Edit the notes, then publish."
           releaseDraft: true
           prerelease: false
+
+  # Mobile jobs run only once the generated project exists, so the first runs do not fail.
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.check.outputs.android }}
+      ios: ${{ steps.check.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          echo "android=$([ -d src-tauri/gen/android ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "ios=$([ -d src-tauri/gen/apple ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  # Unsigned APK. Android will not install it until it is signed (for example with apksigner and a
+  # debug or release keystore). Signing secrets can be added to this job later.
+  android:
+    needs: detect
+    if: needs.detect.outputs.android == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: .
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build unsigned APK
+        run: pnpm tauri android build --apk --target aarch64
+
+      - name: Find the APK
+        id: apk
+        run: echo "path=$(find src-tauri/gen/android -path '*/outputs/apk/*' -name '*.apk' | head -n 1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ${{ steps.apk.outputs.path }}
+
+      - name: Attach to the draft release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: ${{ steps.apk.outputs.path }}
+
+  # Simulator build. Device builds and TestFlight need a paid Apple Developer account, so this
+  # job zips the simulator app instead. It runs on the simulator only.
+  ios:
+    needs: detect
+    if: needs.detect.outputs.ios == 'true'
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: .
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build simulator app
+        run: pnpm tauri ios build --target aarch64-sim
+
+      - name: Zip the simulator app
+        id: app
+        run: |
+          app=$(find src-tauri/gen/apple -name '*.app' -path '*iphonesimulator*' -o -name '*.app' -path '*arm64-sim*' | head -n 1)
+          echo "$app"
+          zip -r "planner-app-simulator.zip" "$app"
+          echo "path=$PWD/planner-app-simulator.zip" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: ${{ steps.app.outputs.path }}
+
+      - name: Attach to the draft release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: ${{ steps.app.outputs.path }}
