@@ -135,7 +135,7 @@ async fn push_then_pull(pool: &SqlitePool, api: &Api, session: &Session) -> Resu
     pull_all(pool, api, &session.client_id).await
 }
 
-async fn push_all(pool: &SqlitePool, api: &Api, client_id: &str) -> Result<(), SyncError> {
+pub(crate) async fn push_all(pool: &SqlitePool, api: &Api, client_id: &str) -> Result<(), SyncError> {
     loop {
         let batch = outbox::take_batch(pool, PUSH_BATCH).await?;
         if batch.is_empty() {
@@ -191,7 +191,7 @@ async fn push_all(pool: &SqlitePool, api: &Api, client_id: &str) -> Result<(), S
 
 /// Pulls from the saved cursor until the server has nothing more. Each page and its new cursor
 /// are saved in one transaction, so a crash never skips ops.
-async fn pull_all(pool: &SqlitePool, api: &Api, client_id: &str) -> Result<bool, SyncError> {
+pub(crate) async fn pull_all(pool: &SqlitePool, api: &Api, client_id: &str) -> Result<bool, SyncError> {
     let mut changed = false;
     loop {
         let since = last_seq(pool).await?;

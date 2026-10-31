@@ -17,6 +17,9 @@ pub mod client;
 pub mod outbox;
 pub mod worker;
 
+#[cfg(test)]
+mod e2e;
+
 /// The family that rows created on this device join, or `None` if the device is not in one.
 /// Existing rows keep their scope, so sharing old private data is a separate step.
 pub async fn active_family(conn: &mut SqliteConnection) -> Result<Option<String>, AppError> {
