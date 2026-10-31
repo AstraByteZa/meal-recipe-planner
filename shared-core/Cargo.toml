@@ -8,7 +8,6 @@ publish = false
 # so the server can depend on it without pulling in the desktop stack.
 [dependencies]
 serde = { workspace = true }
-uuid = { workspace = true }
-
-[dev-dependencies]
 serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }

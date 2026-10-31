@@ -3,3 +3,5 @@
 pub mod entity;
 pub mod ids;
 pub mod lww;
+pub mod time;
+pub mod wire;

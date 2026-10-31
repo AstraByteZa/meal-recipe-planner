@@ -1,0 +1,37 @@
+[package]
+name = "sync-server"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Family sync server: accounts, families and the op log. Runs on Postgres. The client
+# (src-tauri) talks to it through the wire types in shared-core.
+[lib]
+name = "sync_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sync-server"
+path = "src/main.rs"
+
+[dependencies]
+argon2 = "0.5"
+axum = "0.8"
+chrono = { workspace = true }
+futures-util = "0.3"
+jsonwebtoken = "9"
+# argon2 hands out its salt RNG through rand_core, which needs `getrandom` for OsRng.
+rand_core = { version = "0.6", features = ["getrandom"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+shared-core = { path = "../shared-core" }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros", "json", "chrono", "uuid"] }
+tokio = { workspace = true }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { workspace = true }
+
+[dev-dependencies]
+bytes = "1"
+reqwest = { version = "0.13.5", features = ["json", "stream"] }

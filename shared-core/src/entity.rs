@@ -27,6 +27,15 @@ impl EntityType {
             EntityType::Config => "config",
         }
     }
+
+    /// Whether rows of this type can be shared with a family. Per-user settings, diets and
+    /// config always stay private, so the server rejects them with a family id.
+    pub fn is_family_shareable(self) -> bool {
+        matches!(
+            self,
+            EntityType::Track | EntityType::Tag | EntityType::Recipe | EntityType::RecipeTag | EntityType::ScheduleEntry
+        )
+    }
 }
 
 /// What a change does to its row. Upserts carry the full row, and deletes are soft deletes.
