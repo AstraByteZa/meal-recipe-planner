@@ -41,7 +41,7 @@ function useFamilyDetailsRefresh() {
 }
 
 export function useSyncRegister() {
-	return useSyncCommand<{ serverUrl: string; email: string; password: string; displayName?: string }>(
+	return useSyncCommand<{ serverUrl?: string; email: string; password: string; displayName?: string }>(
 		"sync_register",
 	);
 }
@@ -60,7 +60,7 @@ export function useSyncResetToLocal() {
 }
 
 export function useSyncLogin() {
-	return useSyncCommand<{ serverUrl: string; email: string; password: string }>("sync_login");
+	return useSyncCommand<{ serverUrl?: string; email: string; password: string }>("sync_login");
 }
 
 /** Pass `{}`. The command takes no arguments. */

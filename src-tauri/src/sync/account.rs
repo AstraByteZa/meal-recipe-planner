@@ -213,18 +213,18 @@ fn display_name_or_local_part(display_name: Option<&str>, email: &str) -> String
 pub async fn register(
     pool: &SqlitePool,
     handle: &SyncHandle,
-    server_url: &str,
+    server_url: Option<&str>,
     email: &str,
     password: &str,
     display_name: &str,
 ) -> Result<SyncStatus, AppError> {
-    let server_url = normalize_server_url(server_url)?;
+    let server_url = resolve_server_url(server_url, default_server_url().as_deref())?;
     let auth = Api::new(&server_url, None)?.register(email, password, display_name.trim()).await?;
     sign_in(pool, handle, &server_url, auth).await
 }
 
-pub async fn login(pool: &SqlitePool, handle: &SyncHandle, server_url: &str, email: &str, password: &str) -> Result<SyncStatus, AppError> {
-    let server_url = normalize_server_url(server_url)?;
+pub async fn login(pool: &SqlitePool, handle: &SyncHandle, server_url: Option<&str>, email: &str, password: &str) -> Result<SyncStatus, AppError> {
+    let server_url = resolve_server_url(server_url, default_server_url().as_deref())?;
     let auth = Api::new(&server_url, None)?.login(email, password).await?;
     sign_in(pool, handle, &server_url, auth).await
 }
@@ -410,6 +410,20 @@ pub fn normalize_server_url(raw: &str) -> Result<String, AppError> {
     }
 }
 
+/// The address to sign in to. A typed address wins. A blank one means the built-in server, so a
+/// build with no default and no typed address has nowhere to go and says so.
+pub fn resolve_server_url(input: Option<&str>, default: Option<&str>) -> Result<String, AppError> {
+    match input.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(typed) => normalize_server_url(typed),
+        None => match default.map(str::trim).filter(|value| !value.is_empty()) {
+            Some(built_in) => normalize_server_url(built_in),
+            None => Err(AppError::Invalid(
+                "No sync server is set up. Open Advanced Options and enter your server's address.".to_string(),
+            )),
+        },
+    }
+}
+
 /// Wakes the worker for a manual sync. The status returned is the state before the sync finishes.
 pub async fn sync_now(pool: &SqlitePool, handle: &SyncHandle) -> Result<SyncStatus, AppError> {
     handle.wake();
@@ -453,6 +467,22 @@ mod tests {
 
     async fn queued(pool: &SqlitePool) -> i64 {
         sqlx::query_scalar("SELECT COUNT(*) FROM outbox_queue").fetch_one(pool).await.unwrap()
+    }
+
+    #[test]
+    fn a_typed_address_wins_and_a_blank_one_uses_the_built_in_server() {
+        let built_in = Some("https://sync.example.com");
+        assert_eq!(resolve_server_url(Some(" http://10.0.0.5:8080/ "), built_in).unwrap(), "http://10.0.0.5:8080");
+        assert_eq!(resolve_server_url(Some("   "), built_in).unwrap(), "https://sync.example.com");
+        assert_eq!(resolve_server_url(None, built_in).unwrap(), "https://sync.example.com");
+        assert!(resolve_server_url(None, Some("  ")).is_err());
+    }
+
+    #[test]
+    fn no_address_and_no_built_in_server_is_a_clear_error() {
+        let error = resolve_server_url(Some(""), None).unwrap_err();
+        assert!(error.to_string().contains("No sync server is set up"), "{error}");
+        assert!(resolve_server_url(Some("ftp://example.com"), Some("https://sync.example.com")).is_err());
     }
 
     #[test]

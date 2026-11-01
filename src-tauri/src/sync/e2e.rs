@@ -93,13 +93,13 @@ fn devices_share_recipes_edits_deletes_and_families() {
         let stranger = Device::new().await;
 
         // The laptop signs up, makes a private recipe in a slot, and pushes it.
-        account::register(&laptop.pool, &laptop.handle, &url, &email, PASSWORD, "").await.unwrap();
+        account::register(&laptop.pool, &laptop.handle, Some(url.as_str()), &email, PASSWORD, "").await.unwrap();
         let oats = recipes::create(&laptop.pool, &recipe("Overnight oats", &["Breakfast"])).await.unwrap();
         schedule::set_entry(&laptop.pool, DATE, "dinner", &oats).await.unwrap();
         laptop.push().await;
 
         // The phone signs in to the same account and gets the recipe and its slot.
-        account::login(&phone.pool, &phone.handle, &url, &email, PASSWORD).await.unwrap();
+        account::login(&phone.pool, &phone.handle, Some(url.as_str()), &email, PASSWORD).await.unwrap();
         phone.pull().await;
         let name: String = sqlx::query_scalar("SELECT name FROM recipes WHERE id = ?")
             .bind(&oats)
@@ -158,7 +158,7 @@ fn devices_share_recipes_edits_deletes_and_families() {
         assert_eq!(slots, 0, "its planned meals should be gone too");
 
         // A second account must not see the private recipes of the first.
-        account::register(&stranger.pool, &stranger.handle, &url, &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "")
+        account::register(&stranger.pool, &stranger.handle, Some(url.as_str()), &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "")
             .await
             .unwrap();
         stranger.pull().await;
@@ -204,11 +204,11 @@ fn invites_removal_and_reconcile_follow_the_server() {
         let outsider = Device::new().await;
         let member_email = format!("e2e-{}@example.test", Uuid::new_v4());
 
-        account::register(&owner.pool, &owner.handle, &url, &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "Owner")
+        account::register(&owner.pool, &owner.handle, Some(url.as_str()), &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "Owner")
             .await
             .unwrap();
-        account::register(&phone.pool, &phone.handle, &url, &member_email, PASSWORD, "Sam").await.unwrap();
-        account::register(&outsider.pool, &outsider.handle, &url, &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "")
+        account::register(&phone.pool, &phone.handle, Some(url.as_str()), &member_email, PASSWORD, "Sam").await.unwrap();
+        account::register(&outsider.pool, &outsider.handle, Some(url.as_str()), &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "")
             .await
             .unwrap();
 
@@ -233,7 +233,7 @@ fn invites_removal_and_reconcile_follow_the_server() {
         let sam = details.members.iter().find(|member| member.role == FamilyRole::Member).expect("the member").user_id;
 
         // The member's second device learns the family from the server, without a code.
-        account::login(&tablet.pool, &tablet.handle, &url, &member_email, PASSWORD).await.unwrap();
+        account::login(&tablet.pool, &tablet.handle, Some(url.as_str()), &member_email, PASSWORD).await.unwrap();
         assert!(tablet.reconcile().await, "a second device adopts the one family the account is in");
         tablet.pull().await;
         assert_eq!(family_id_of(&tablet.pool, &shared).await.as_deref(), Some(home.id.as_str()));

@@ -84,7 +84,12 @@ describe("accountFormSchema", () => {
 		expect(accountFormSchema.safeParse(account).success).toBe(true);
 	});
 
-	it("requires an http or https server address", () => {
+	it("accepts a blank server address, which means the built-in server", () => {
+		expect(accountFormSchema.safeParse({ ...account, serverUrl: "" }).success).toBe(true);
+		expect(accountFormSchema.safeParse({ ...account, serverUrl: "   " }).success).toBe(true);
+	});
+
+	it("requires an http or https server address when one is typed", () => {
 		expect(accountFormSchema.safeParse({ ...account, serverUrl: "sync.example.com" }).success).toBe(false);
 		expect(accountFormSchema.safeParse({ ...account, serverUrl: "ftp://sync.example.com" }).success).toBe(false);
 		expect(accountFormSchema.safeParse({ ...account, serverUrl: "http://localhost:8080" }).success).toBe(true);
