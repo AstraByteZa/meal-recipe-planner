@@ -153,7 +153,9 @@ fn devices_share_recipes_edits_deletes_and_families() {
         let shared = recipes::create(&laptop.pool, &recipe("Family pancakes", &["Breakfast"])).await.unwrap();
         laptop.push().await;
 
-        account::family_join(&phone.pool, &phone.handle, &family.invite_code).await.unwrap();
+        let owner = session(&laptop.pool).await.unwrap().expect("the laptop is signed in");
+        let invite = Api::new(&owner.server_url, Some(&owner.token)).unwrap().create_invite(&family.id).await.unwrap();
+        account::family_join(&phone.pool, &phone.handle, &invite.code).await.unwrap();
         phone.pull().await;
         let family_id: Option<String> = sqlx::query_scalar("SELECT family_id FROM recipes WHERE id = ?")
             .bind(&shared)

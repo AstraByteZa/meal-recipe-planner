@@ -4,6 +4,7 @@ use sqlx::PgPool;
 
 use crate::config::Config;
 use crate::hub::Hub;
+use crate::throttle::JoinThrottle;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -11,6 +12,7 @@ pub struct AppState {
     pub jwt_secret: Arc<[u8]>,
     pub registration_open: bool,
     pub hub: Hub,
+    pub join_throttle: JoinThrottle,
 }
 
 impl AppState {
@@ -20,6 +22,7 @@ impl AppState {
             jwt_secret: Arc::from(config.jwt_secret.as_bytes()),
             registration_open: config.registration_open,
             hub: Hub::default(),
+            join_throttle: JoinThrottle::default(),
         }
     }
 }

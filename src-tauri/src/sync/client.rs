@@ -7,7 +7,7 @@ use std::time::Duration;
 use reqwest::{Client, Response, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use shared_core::wire::{PullResponse, PushRequest, PushResponse, SseEvent};
+use shared_core::wire::{FamilyRole, InviteDto, PullResponse, PushRequest, PushResponse, SseEvent};
 
 use crate::error::AppError;
 
@@ -75,7 +75,9 @@ pub struct AuthResponse {
 pub struct FamilyDto {
     pub id: String,
     pub name: String,
-    pub invite_code: String,
+    /// Read by the Family page, which lands in a later phase.
+    #[allow(dead_code)]
+    pub role: FamilyRole,
 }
 
 /// A client for one server. `token` is needed for everything except register and login.
@@ -114,6 +116,13 @@ impl Api {
 
     pub async fn join_family(&self, invite_code: &str) -> Result<FamilyDto, SyncError> {
         self.post("/family/join", &json!({ "invite_code": invite_code })).await
+    }
+
+    /// Creates a single-use invite code. Only the family owner may call this. The app calls it
+    /// from the Family page, which lands in a later phase; until then the e2e test uses it.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub async fn create_invite(&self, family_id: &str) -> Result<InviteDto, SyncError> {
+        self.post(&format!("/family/{family_id}/invites"), &json!({})).await
     }
 
     pub async fn push(&self, request: &PushRequest) -> Result<PushResponse, SyncError> {

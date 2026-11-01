@@ -122,7 +122,6 @@ async fn pull_hides_private_rows_from_others_and_shares_family_rows() {
     let bob = server.register("bob@example.com").await;
     let family = server.create_family(&alice.token, "Kitchen").await;
     let family_id = family["id"].as_str().unwrap();
-    let invite = family["invite_code"].as_str().unwrap();
 
     let private_id = new_id();
     let shared_id = new_id();
@@ -149,14 +148,7 @@ async fn pull_hides_private_rows_from_others_and_shares_family_rows() {
     assert_eq!(alice_names, ["Mine", "Ours"]);
 
     // After joining, Bob sees the family row but still not Alice's private one.
-    server
-        .http
-        .post(server.url("/family/join"))
-        .bearer_auth(&bob.token)
-        .json(&json!({ "invite_code": invite }))
-        .send()
-        .await
-        .unwrap();
+    server.join_family(&alice.token, family_id, &bob.token).await;
     let bob_ops = server.pull(&bob.token, 0).await["ops"].clone();
     let bob_names: Vec<&str> = bob_ops.as_array().unwrap().iter().map(|op| op["payload"]["name"].as_str().unwrap()).collect();
     assert_eq!(bob_names, ["Ours"]);
@@ -189,14 +181,7 @@ async fn stream_announces_family_changes_but_not_private_ones() {
     let bob = server.register("stream-b@example.com").await;
     let family = server.create_family(&alice.token, "Stream").await;
     let family_id = family["id"].as_str().unwrap().to_string();
-    server
-        .http
-        .post(server.url("/family/join"))
-        .bearer_auth(&bob.token)
-        .json(&json!({ "invite_code": family["invite_code"] }))
-        .send()
-        .await
-        .unwrap();
+    server.join_family(&alice.token, &family_id, &bob.token).await;
 
     let mut stream = server.open_stream(&bob.token).await;
     let initial = stream.next_seq().await;

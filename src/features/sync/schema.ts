@@ -6,7 +6,7 @@ export const syncStatusSchema = z.object({
 	serverUrl: z.string().nullable(),
 	email: z.string().nullable(),
 	family: z
-		.object({ id: z.string(), name: z.string(), inviteCode: z.string() })
+		.object({ id: z.string(), name: z.string() })
 		.nullable(),
 	pending: z.number().int().nonnegative(),
 	syncing: z.boolean(),

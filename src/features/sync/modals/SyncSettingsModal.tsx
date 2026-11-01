@@ -5,8 +5,6 @@ import { modals, type ContextModalProps } from "@mantine/modals";
 import {
 	Alert,
 	Button,
-	Code,
-	CopyButton,
 	Group,
 	PasswordInput,
 	SegmentedControl,
@@ -171,15 +169,6 @@ function FamilySection({ family }: { family: SyncStatus["family"] }) {
 		return <Stack gap="xs">
 			<Text fw={500}>Family: {family.name}</Text>
 			<Text size="sm" c="dimmed">Recipes and meal plans added from now on are shared with the family.</Text>
-			<Group gap="xs">
-				<Text size="sm">Invite code</Text>
-				<Code>{family.inviteCode}</Code>
-				<CopyButton value={family.inviteCode}>
-					{({ copied, copy }) => <Button size="xs" variant="default" onClick={copy}>
-						{copied ? "Copied" : "Copy"}
-					</Button>}
-				</CopyButton>
-			</Group>
 		</Stack>;
 	}
 

@@ -30,6 +30,7 @@ use uuid::Uuid;
 use crate::auth::AuthUser;
 use crate::error::{ApiError, ApiResult, internal};
 use crate::family::family_ids;
+use crate::hub::Notice;
 use crate::state::AppState;
 
 /// Transaction lock taken by every push. `seq` is assigned at insert time, but rows commit in
@@ -90,7 +91,7 @@ pub async fn push(
 
     // Only after commit, so a stream never announces a seq that a pull cannot yet see.
     for (channel, seq) in newest {
-        state.hub.notify(channel, seq);
+        state.hub.notify(channel, Notice::Ops(seq));
     }
     Ok(Json(PushResponse { results }))
 }
@@ -260,18 +261,26 @@ pub async fn stream(State(state): State<AppState>, AuthUser(me): AuthUser) -> Ap
     let updates = select_all(channels.map(|channel| BroadcastStream::new(state.hub.subscribe(channel))));
     let initial = latest_seq(&state, me, families).await?;
 
-    let seqs = updates.scan(initial, |latest, item| {
-        let seq = match item {
-            Ok(seq) => seq,
-            // Missed some notifications. Repeat the last seq, since the client pulls anyway.
-            Err(BroadcastStreamRecvError::Lagged(_)) => *latest,
-        };
-        *latest = seq;
-        future::ready(Some(seq))
-    });
-    let events = stream::once(future::ready(initial))
-        .chain(seqs)
-        .map(|seq| Ok::<Event, Infallible>(sse_event(seq)));
+    let events = updates
+        .scan(initial, |latest, item| {
+            let batch = match item {
+                Ok(Notice::Ops(seq)) => {
+                    *latest = seq;
+                    vec![SseEvent::op_ready(seq)]
+                }
+                Ok(Notice::Membership) => vec![SseEvent::membership_changed()],
+                // Notices were missed, and any of them may have been a membership change. Send
+                // both, since the client re-reads and pulls anyway.
+                Err(BroadcastStreamRecvError::Lagged(_)) => {
+                    vec![SseEvent::op_ready(*latest), SseEvent::membership_changed()]
+                }
+            };
+            future::ready(Some(batch))
+        })
+        .flat_map(stream::iter);
+    let events = stream::once(future::ready(SseEvent::op_ready(initial)))
+        .chain(events)
+        .map(|event| Ok::<Event, Infallible>(sse_event(&event)));
 
     let sse = Sse::new(events).keep_alive(KeepAlive::new().interval(Duration::from_secs(KEEP_ALIVE_SECS)));
     // Some proxies buffer event streams unless told not to. nginx honours this header.
@@ -290,6 +299,6 @@ async fn latest_seq(state: &AppState, me: Uuid, families: Vec<Uuid>) -> ApiResul
     Ok(seq)
 }
 
-fn sse_event(seq: i64) -> Event {
-    Event::default().json_data(SseEvent::op_ready(seq)).unwrap_or_else(|_| Event::default())
+fn sse_event(event: &SseEvent) -> Event {
+    Event::default().json_data(event).unwrap_or_else(|_| Event::default())
 }

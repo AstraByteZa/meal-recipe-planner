@@ -58,7 +58,6 @@ pub struct SyncStatus {
 pub struct FamilyInfo {
     pub id: String,
     pub name: String,
-    pub invite_code: String,
 }
 
 /// The session the worker runs with, or `None` while signed out.
@@ -76,8 +75,8 @@ pub async fn status(pool: &SqlitePool, handle: &SyncHandle) -> Result<SyncStatus
     let pending = outbox::pending_count(pool).await?;
     let mut conn = pool.acquire().await?;
     let token = meta(&mut conn, TOKEN).await?;
-    let family = match (active_family(&mut conn).await?, meta(&mut conn, FAMILY_NAME).await?, meta(&mut conn, FAMILY_INVITE).await?) {
-        (Some(id), Some(name), Some(invite_code)) => Some(FamilyInfo { id, name, invite_code }),
+    let family = match (active_family(&mut conn).await?, meta(&mut conn, FAMILY_NAME).await?) {
+        (Some(id), Some(name)) => Some(FamilyInfo { id, name }),
         _ => None,
     };
     let snapshot = handle.snapshot();
@@ -185,7 +184,8 @@ async fn activate_family(pool: &SqlitePool, handle: &SyncHandle, family: &Family
     let mut tx = pool.begin().await?;
     set_meta(&mut *tx, "active_family_id", &family.id).await?;
     set_meta(&mut *tx, FAMILY_NAME, &family.name).await?;
-    set_meta(&mut *tx, FAMILY_INVITE, &family.invite_code).await?;
+    // Invite codes are per invite now and the owner creates them, so no code is kept here.
+    clear_meta(&mut *tx, FAMILY_INVITE).await?;
     if rewind {
         set_meta(&mut *tx, LAST_SEQ_KEY, "0").await?;
     }

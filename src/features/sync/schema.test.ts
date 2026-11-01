@@ -9,7 +9,7 @@ describe("syncStatusSchema", () => {
 			signedIn: true,
 			serverUrl: "https://sync.example.com",
 			email: "cook@example.com",
-			family: { id: "f1", name: "Home", inviteCode: "ABC123" },
+			family: { id: "f1", name: "Home" },
 			pending: 3,
 			syncing: false,
 			lastSyncedAt: "2026-10-31T10:00:00.000Z",
