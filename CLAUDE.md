@@ -48,7 +48,7 @@ The repo is a Cargo workspace (root `Cargo.toml`, no root package). Members: `sr
 - **Styling priority:** use CSS modules (`*.module.css`, imported as `classes`) for component styling. Use Mantine style props only when a component needs one or two style values, such as `mt="sm"` or `p="sm"`. If a component needs more than that, move the styles into its module.
 - Keep CSS modules next to the component that uses them, named after it (`UserButton.tsx` and `UserButton.module.css`).
 - Use Mantine's theme (`myColor`, breakpoints) for colors and sizes rather than hardcoding hex values or pixel breakpoints in CSS.
-- Target design: `docs/designs/schedule.png` (weekly meal schedule) and `docs/designs/recipe_links.png` (recipe library). Match these layouts when building the planner and recipe UI.
+- Target design: `docs/designs/Schedule@1x.png` (weekly meal schedule) and `docs/designs/Recipe links@1x.png` (recipe library). Auth and family screens are in `docs/designs/auth/` and `docs/designs/family/`. Match these layouts when building the planner, recipe and account UI.
 
 ### Routing and data fetching
 
