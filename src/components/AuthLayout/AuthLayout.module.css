@@ -78,18 +78,44 @@
 	gap: var(--mantine-spacing-md);
 }
 
+/* Narrow screens: the brand bar stays on top, the pitch copy is dropped, and the form sits on the
+   page with no card so it reads like the mobile designs. */
 @media (max-width: $mantine-breakpoint-sm) {
 	.layout {
 		flex-direction: column;
+		padding-top: env(safe-area-inset-top);
+		padding-bottom: env(safe-area-inset-bottom);
 	}
 
 	.pitch {
 		flex: 0 0 auto;
+		flex-direction: row;
+		align-items: center;
+		padding: var(--mantine-spacing-md);
 		border-right: none;
 		border-bottom: 1px solid var(--mantine-color-dark-4);
 	}
 
+	.brand {
+		margin-bottom: 0;
+	}
+
+	.title,
+	.pitchText,
+	.points {
+		display: none;
+	}
+
 	.main {
+		align-items: flex-start;
 		padding: var(--mantine-spacing-md);
+	}
+
+	.card {
+		max-width: none;
+		padding: 0;
+		border: none;
+		border-radius: 0;
+		background-color: transparent;
 	}
 }

@@ -72,7 +72,8 @@ interface RecipeCardProps {
 	onEdit: () => void;
 }
 
-function RecipeCard({ meal, highlighted, onEdit }: RecipeCardProps) {
+/** A planned meal. Shared with the narrow-screen day list. */
+export function RecipeCard({ meal, highlighted, onEdit }: RecipeCardProps) {
 	const className = highlighted
 		? `${classes.card} ${classes.editableCard} ${classes.cardToday}`
 		: `${classes.card} ${classes.editableCard}`;
@@ -90,7 +91,8 @@ interface AddMealCellProps {
 	onAdd: () => void;
 }
 
-function AddMealCell({ highlighted, onAdd }: AddMealCellProps) {
+/** An open slot. Shared with the narrow-screen day list. */
+export function AddMealCell({ highlighted, onAdd }: AddMealCellProps) {
 	return <UnstyledButton onClick={onAdd} className={highlighted ? `${classes.emptyCell} ${classes.cardHighlighted}` : classes.emptyCell}>
 		<IconPlus size={14} stroke={1.5} />
 		<Text size="sm" c="dimmed">Add meal</Text>

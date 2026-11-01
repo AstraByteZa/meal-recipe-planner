@@ -30,6 +30,35 @@
 	color: var(--mantine-color-dimmed);
 }
 
+.compact {
+	position: relative;
+}
+
+/* The state dot sits on the corner of the icon, outlined so it reads over the button. */
+.compactDot {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	border: 2px solid light-dark(var(--mantine-color-white), var(--mantine-color-dark-6));
+	background-color: var(--mantine-color-dark-2);
+
+	&[data-state="ok"] {
+		background-color: var(--mantine-color-green-6);
+	}
+
+	&[data-state="busy"],
+	&[data-state="waiting"] {
+		background-color: var(--mantine-color-yellow-6);
+	}
+
+	&[data-state="error"] {
+		background-color: var(--mantine-color-red-6);
+	}
+}
+
 .dot {
 	flex-shrink: 0;
 	width: 8px;

@@ -28,7 +28,7 @@ export function AuthLayout({ pitch, children }: AuthLayoutProps) {
 				<Text fw={700}>Mise</Text>
 			</div>
 			<Title order={1} className={classes.title}>{pitch.title}</Title>
-			<Text c="dimmed">{pitch.text}</Text>
+			<Text c="dimmed" className={classes.pitchText}>{pitch.text}</Text>
 			<ul className={classes.points}>
 				{pitch.points.map((point) => <li key={point}>
 					<IconCheck size={16} stroke={2} className={classes.check} />

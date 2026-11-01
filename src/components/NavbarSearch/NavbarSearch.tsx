@@ -1,29 +1,18 @@
-import { IconCalendarWeek, IconCircleDot, IconLink, IconUsers } from '@tabler/icons-react';
 import { Box, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { IconCircleDot } from '@tabler/icons-react';
 import { WeekProgress } from '../../features/planner/components/WeekProgress';
 import { AccountButton } from '../../features/sync/components/AccountButton';
 import { SyncChip } from '../../features/sync/components/SyncChip';
 import { syncStatusQueryOptions } from '../../features/sync/queries';
+import { navItems } from '../Layout/navItems';
 import classes from './NavbarSearch.module.css';
-
-type NavTo = '/' | '/recipes' | '/family';
-
-const links: { icon: typeof IconCalendarWeek; label: string; to: NavTo }[] = [
-  { icon: IconCalendarWeek, label: 'Schedule', to: '/' },
-  { icon: IconLink, label: 'Recipe links', to: '/recipes' },
-];
 
 export function NavbarSearch() {
   const { data: status } = useQuery(syncStatusQueryOptions);
-  // Family only exists for signed-in accounts, so the item is hidden until then.
-  const familyLink = status?.mode === 'signed_in'
-    ? { icon: IconUsers, label: 'Family', to: '/family' as NavTo }
-    : null;
-  const allLinks = familyLink ? [...links, familyLink] : links;
 
-  const mainLinks = allLinks.map((link) => (
+  const mainLinks = navItems(status?.mode === 'signed_in').map((link) => (
     <Link
       key={link.label}
       to={link.to}

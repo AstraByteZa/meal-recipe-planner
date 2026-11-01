@@ -78,3 +78,10 @@
 	gap: var(--mantine-spacing-xs);
 	margin-top: var(--mantine-spacing-md);
 }
+
+/* Narrow screens use the top bar and the bottom tabs instead. */
+@media (max-width: $mantine-breakpoint-sm) {
+	.navbar {
+		display: none;
+	}
+}

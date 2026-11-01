@@ -11,7 +11,20 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	flex-wrap: wrap;
 	gap: var(--mantine-spacing-md);
+}
+
+/* Hidden on narrow screens, where the day list replaces the grid and the header is compact. */
+@media (max-width: $mantine-breakpoint-sm) {
+	.view {
+		gap: var(--mantine-spacing-md);
+		padding: var(--mantine-spacing-md);
+	}
+
+	.wideOnly {
+		display: none;
+	}
 }
 
 .eyebrow {

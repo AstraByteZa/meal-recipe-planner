@@ -45,6 +45,11 @@
 }
 
 @media (max-width: $mantine-breakpoint-sm) {
+	.view {
+		gap: var(--mantine-spacing-md);
+		padding: var(--mantine-spacing-md);
+	}
+
 	.columns {
 		grid-template-columns: minmax(0, 1fr);
 	}
