@@ -11,6 +11,7 @@ pub enum ApiError {
     Forbidden(String),
     NotFound(String),
     Conflict(String),
+    TooManyRequests(String),
     Internal,
 }
 
@@ -24,6 +25,7 @@ impl IntoResponse for ApiError {
             ApiError::Forbidden(message) => (StatusCode::FORBIDDEN, message),
             ApiError::NotFound(message) => (StatusCode::NOT_FOUND, message),
             ApiError::Conflict(message) => (StatusCode::CONFLICT, message),
+            ApiError::TooManyRequests(message) => (StatusCode::TOO_MANY_REQUESTS, message),
             ApiError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()),
         };
         (status, Json(json!({ "error": message }))).into_response()

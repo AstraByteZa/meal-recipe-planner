@@ -8,13 +8,30 @@ use shared_core::entity::{EntityType, Operation};
 use shared_core::lww::lww_wins;
 
 use crate::error::AppError;
+use crate::sync::{meta, USER_ID};
 
 /// Queues the current state of one row for push. Call it in the transaction that changed the row.
+///
+/// A device with no linked account (`sync_meta.user_id` unset) keeps no outbox: its rows are
+/// local and get queued when it signs in, by `account::adopt_local_rows`.
 ///
 /// Soft deletes are recorded as `Delete`, but the payload is still the whole row (with
 /// `deleted_at` set), so the server can apply it like any other change. A row that is already
 /// pending is overwritten with its latest state, so repeated edits make one push.
 pub async fn record(
+    conn: &mut SqliteConnection,
+    entity: EntityType,
+    id: &str,
+    operation: Operation,
+) -> Result<(), AppError> {
+    if meta(conn, USER_ID).await?.is_none() {
+        return Ok(());
+    }
+    enqueue(conn, entity, id, operation).await
+}
+
+/// Queues a row whether or not the device is linked. Only the sign-in backfill needs this.
+pub async fn enqueue(
     conn: &mut SqliteConnection,
     entity: EntityType,
     id: &str,
@@ -240,6 +257,17 @@ mod tests {
     use sqlx::SqlitePool;
     use tauri::async_runtime::block_on;
 
+    /// A test pool for a device linked to an account, so changes are queued. A local-only
+    /// device keeps no outbox (see `record`).
+    async fn linked_pool() -> SqlitePool {
+        let pool = test_pool().await;
+        sqlx::query("INSERT INTO sync_meta (key, value) VALUES ('user_id', 'user-1')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool
+    }
+
     fn recipe_input(name: &str, tags: &[&str]) -> RecipeInput {
         RecipeInput {
             name: name.to_string(),
@@ -284,7 +312,7 @@ mod tests {
     #[test]
     fn creating_a_recipe_queues_the_recipe_and_its_tag_links() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             recipes::create(&pool, &recipe_input("oats", &["Quick"])).await.unwrap();
             assert_eq!(queued(&pool).await, ["recipe UPSERT", "tag UPSERT", "recipe_tag UPSERT"]);
         });
@@ -293,7 +321,7 @@ mod tests {
     #[test]
     fn deleting_a_recipe_queues_deletes_for_its_plan_and_tag_links() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             let id = recipes::create(&pool, &recipe_input("pie", &["Dinner"])).await.unwrap();
             schedule::set_entry(&pool, "2026-10-26", "dinner", &id).await.unwrap();
             clear_queue(&pool).await;
@@ -312,7 +340,7 @@ mod tests {
     #[test]
     fn repeated_edits_to_one_slot_coalesce_into_one_pending_change() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             let oats = recipes::create(&pool, &recipe_input("oats", &[])).await.unwrap();
             let toast = recipes::create(&pool, &recipe_input("toast", &[])).await.unwrap();
             clear_queue(&pool).await;
@@ -329,7 +357,7 @@ mod tests {
     #[test]
     fn a_change_being_pushed_does_not_block_a_newer_one() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             let oats = recipes::create(&pool, &recipe_input("oats", &[])).await.unwrap();
             schedule::set_entry(&pool, "2026-10-26", "breakfast", &oats).await.unwrap();
             sqlx::query("UPDATE outbox_queue SET status = 'syncing'")
@@ -351,7 +379,7 @@ mod tests {
     #[test]
     fn removing_a_track_queues_its_meals_recipes_and_the_track() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             let mut input = recipe_input("oats", &[]);
             input.usual_track_key = Some("lunch".to_string());
             let oats = recipes::create(&pool, &input).await.unwrap();
@@ -384,7 +412,7 @@ mod tests {
     #[test]
     fn saving_settings_queues_the_household_and_only_changed_diets() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             let input = |size: i64, dietary: &[&str]| SettingsInput {
                 household_size: size,
                 week_starts_on: "monday".to_string(),
@@ -406,7 +434,7 @@ mod tests {
     #[test]
     fn settings_payload_leaves_out_the_device_onboarding_flag() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             settings::complete_onboarding(&pool).await.unwrap();
             settings::save(
                 &pool,
@@ -428,7 +456,7 @@ mod tests {
     #[test]
     fn config_payload_carries_the_value_as_json() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             config::set(&pool, "cook-keep-awake", &json!(true)).await.unwrap();
 
             let payload = queued_payload(&pool, "config").await;
@@ -440,7 +468,7 @@ mod tests {
     #[test]
     fn rows_created_after_joining_a_family_take_its_id() {
         block_on(async {
-            let pool = test_pool().await;
+            let pool = linked_pool().await;
             let before = recipes::create(&pool, &recipe_input("before", &[])).await.unwrap();
             sqlx::query("INSERT INTO sync_meta (key, value) VALUES ('active_family_id', 'family-1')")
                 .execute(&pool)

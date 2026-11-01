@@ -1,0 +1,6 @@
+.input {
+	font-family: var(--mantine-font-family-monospace);
+	font-size: var(--mantine-font-size-lg);
+	letter-spacing: 0.12em;
+	text-align: center;
+}

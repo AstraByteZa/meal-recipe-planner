@@ -1,0 +1,121 @@
+.layout {
+	flex: 1;
+	min-width: 0;
+	min-height: 100vh;
+	display: flex;
+}
+
+.pitch {
+	flex: 0 0 380px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-md);
+	padding: var(--mantine-spacing-xl);
+	border-right: 1px solid var(--mantine-color-dark-4);
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-xs);
+	margin-bottom: var(--mantine-spacing-lg);
+}
+
+.mark {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--mantine-radius-md);
+	background-color: var(--mantine-primary-color-filled);
+	color: var(--mantine-primary-color-contrast);
+}
+
+.title {
+	font-size: 2.25rem;
+	line-height: 1.15;
+}
+
+.points {
+	list-style: none;
+	margin: var(--mantine-spacing-md) 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-sm);
+}
+
+.points li {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-sm);
+}
+
+.check {
+	flex: 0 0 auto;
+	color: var(--mantine-primary-color-filled);
+}
+
+.main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--mantine-spacing-xl);
+}
+
+.card {
+	width: 100%;
+	max-width: 420px;
+	padding: var(--mantine-spacing-xl);
+	border-radius: var(--mantine-radius-lg);
+	background-color: var(--mantine-color-dark-6);
+	border: 1px solid var(--mantine-color-dark-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-md);
+}
+
+/* Narrow screens: the brand bar stays on top, the pitch copy is dropped, and the form sits on the
+   page with no card so it reads like the mobile designs. */
+@media (max-width: $mantine-breakpoint-sm) {
+	.layout {
+		flex-direction: column;
+		padding-top: env(safe-area-inset-top);
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+	.pitch {
+		flex: 0 0 auto;
+		flex-direction: row;
+		align-items: center;
+		padding: var(--mantine-spacing-md);
+		border-right: none;
+		border-bottom: 1px solid var(--mantine-color-dark-4);
+	}
+
+	.brand {
+		margin-bottom: 0;
+	}
+
+	.title,
+	.pitchText,
+	.points {
+		display: none;
+	}
+
+	.main {
+		align-items: flex-start;
+		padding: var(--mantine-spacing-md);
+	}
+
+	.card {
+		max-width: none;
+		padding: 0;
+		border: none;
+		border-radius: 0;
+		background-color: transparent;
+	}
+}

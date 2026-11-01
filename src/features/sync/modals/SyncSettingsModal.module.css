@@ -1,0 +1,36 @@
+.card,
+.account {
+	padding: var(--mantine-spacing-md);
+	border-radius: var(--mantine-radius-lg);
+	background-color: var(--mantine-color-dark-5);
+	border: 1px solid var(--mantine-color-dark-4);
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-sm);
+}
+
+.accountRow {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-sm);
+}
+
+.grow {
+	flex: 1;
+	min-width: 0;
+}
+
+.avatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 36px;
+	height: 36px;
+	border-radius: 50%;
+	background-color: var(--mantine-color-dark-4);
+	color: var(--mantine-primary-color-filled);
+	font-weight: 700;
+}

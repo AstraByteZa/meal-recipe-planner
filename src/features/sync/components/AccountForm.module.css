@@ -1,0 +1,27 @@
+.advanced {
+	align-self: flex-start;
+}
+
+.passwordRow {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--mantine-spacing-xs);
+}
+
+.passwordInput {
+	flex: 1;
+	min-width: 0;
+}
+
+.showButton {
+	flex: 0 0 auto;
+}
+
+.switch {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--mantine-font-size-sm);
+	color: var(--mantine-color-dimmed);
+}

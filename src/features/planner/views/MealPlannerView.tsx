@@ -6,7 +6,10 @@ import dayjs from "../../../lib/dayjs";
 import { FillTheGaps } from "../components/FillTheGaps";
 import { openManageTracksModal } from "../modals/ManageTracksModal";
 import { PastWeeks } from "../components/PastWeeks";
+import { PlannerDayList } from "../components/PlannerDayList";
 import { PlannerSchedule } from "../components/PlannerSchedule";
+import { RemovedNotice } from "../../sync/components/RemovedBanner";
+import { SignedOutBanner } from "../../sync/components/SignedOutBanner";
 import { scheduleQueryOptions, tracksQueryOptions } from "../queries";
 import { formatWeekRange } from "../format";
 import { currentWeek, shiftWeek } from "../week";
@@ -23,6 +26,9 @@ export function MealPlannerView() {
 	const isoYear = weekStart.add(3, "day").year();
 
 	return <div className={classes.view}>
+		<RemovedNotice />
+		<SignedOutBanner />
+
 		<header className={classes.header}>
 			<div>
 				<Text size="xs" c="dimmed" className={classes.eyebrow}>
@@ -40,11 +46,14 @@ export function MealPlannerView() {
 					<IconChevronRight size={16} stroke={1.5} />
 				</ActionIcon>
 				<Button variant="default" leftSection={<IconAdjustmentsHorizontal size={16} stroke={1.5} />} onClick={openManageTracksModal}>Tracks</Button>
-					<Button>Auto-fill gaps</Button>
+				<Button className={classes.wideOnly}>Auto-fill gaps</Button>
 			</Group>
 		</header>
 
-		<PlannerSchedule weekStart={weekStart} tracks={tracks} plan={plan} />
+		<div className={classes.wideOnly}>
+			<PlannerSchedule weekStart={weekStart} tracks={tracks} plan={plan} />
+		</div>
+		<PlannerDayList weekStart={weekStart} tracks={tracks} plan={plan} />
 
 		<div className={classes.lower}>
 			<PastWeeks weekStart={weekStart} tracks={tracks} plan={plan} />

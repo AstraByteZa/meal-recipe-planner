@@ -1,5 +1,6 @@
 import { IconAdjustmentsHorizontal, IconCalendarWeek, IconLink } from "@tabler/icons-react";
-import { Stack, Text } from "@mantine/core";
+import { useNavigate } from "@tanstack/react-router";
+import { Anchor, Stack, Text } from "@mantine/core";
 import { StepFooter } from "./StepFooter";
 import { StepIntro } from "./StepIntro";
 import classes from "./WelcomeStep.module.css";
@@ -15,6 +16,8 @@ interface WelcomeStepProps {
 }
 
 export function WelcomeStep({ onNext }: WelcomeStepProps) {
+	const navigate = useNavigate();
+
 	return <>
 		<StepIntro
 			step={1}
@@ -33,6 +36,14 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
 				</div>
 			</div>)}
 		</Stack>
+
+		{/* Optional. Signing in returns to onboarding, so skipping it costs nothing. */}
+		<Text size="sm" c="dimmed" ta="center">
+			Optional: sync across devices later.{" "}
+			<Anchor component="button" type="button" size="sm" onClick={() => navigate({ to: "/sign-in", search: { next: "/onboarding?step=1" } })}>
+				Sign in
+			</Anchor>
+		</Text>
 
 		<StepFooter onNext={onNext} nextLabel="Get started" />
 	</>

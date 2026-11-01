@@ -28,17 +28,6 @@
 	color: var(--mantine-color-black);
 }
 
-.searchCode {
-	font-weight: 700;
-	font-size: 10px;
-	background-color: light-dark(
-		var(--mantine-color-gray-0),
-		var(--mantine-color-dark-7)
-	);
-	border: 1px solid
-		light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-7));
-}
-
 .mainLinks {
 	display: flex;
 	flex-direction: column;
@@ -81,4 +70,18 @@
 .footer {
 	margin-top: auto;
 	padding-top: var(--mantine-spacing-md);
+}
+
+.sync {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mantine-spacing-xs);
+	margin-top: var(--mantine-spacing-md);
+}
+
+/* Narrow screens use the top bar and the bottom tabs instead. */
+@media (max-width: $mantine-breakpoint-sm) {
+	.navbar {
+		display: none;
+	}
 }

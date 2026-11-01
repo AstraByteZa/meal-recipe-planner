@@ -18,7 +18,7 @@ owns the display name, which settles open question 1 in `FAMILY_IMPL.md`.
 - **Full-page screens:** `/sign-in` and `/join` exist as full pages (see `docs/designs/auth/`), in
   addition to the sync settings modal. Both share one form component.
 - **Join is two steps:** "Check code" calls a non-consuming preview endpoint
-  (`GET /family/invites/{code}`) that returns the family name, the inviter, and member count; the
+  (`GET /invites/{code}`) that returns the family name, the inviter, and member count; the
   code is consumed only on "Accept and join".
 
 ## 3. What already works (no change)

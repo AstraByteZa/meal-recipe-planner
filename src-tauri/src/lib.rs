@@ -52,8 +52,19 @@ pub fn run() {
             commands::sync_login,
             commands::sync_logout,
             commands::sync_now,
+            commands::sync_set_name,
+            commands::sync_reset_to_local,
             commands::family_create,
             commands::family_join,
+            commands::family_details,
+            commands::family_invite_create,
+            commands::family_invite_revoke,
+            commands::family_invite_preview,
+            commands::family_rename,
+            commands::family_member_remove,
+            commands::family_transfer,
+            commands::family_delete,
+            commands::sync_dismiss_notice,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

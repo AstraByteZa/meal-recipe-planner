@@ -6,11 +6,14 @@ pub mod db;
 pub mod error;
 pub mod family;
 pub mod hub;
+pub mod invite;
+pub mod member;
 pub mod state;
 pub mod sync;
+pub mod throttle;
 
 use axum::extract::DefaultBodyLimit;
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::Router;
 
 pub use state::AppState;
@@ -26,7 +29,13 @@ pub fn router(state: AppState) -> Router {
         .route("/me", get(auth::me).patch(auth::update_me))
         .route("/family", get(family::list))
         .route("/family/create", post(family::create))
-        .route("/family/join", post(family::join))
+        .route("/family/join", post(invite::join))
+        .route("/family/{id}", get(family::details).patch(family::rename).delete(family::delete))
+        .route("/family/{id}/invites", post(invite::create))
+        .route("/family/{id}/invites/{invite}", delete(invite::revoke))
+        .route("/family/{id}/members/{user}", delete(member::remove))
+        .route("/family/{id}/owner", post(member::transfer))
+        .route("/invites/{code}", get(invite::preview))
         .route("/sync/push", post(sync::push))
         .route("/sync/pull", get(sync::pull))
         .route("/sync/stream", get(sync::stream))

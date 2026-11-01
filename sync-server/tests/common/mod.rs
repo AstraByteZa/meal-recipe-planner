@@ -24,6 +24,8 @@ const SECRET: &str = "test-secret-that-is-long-enough-for-hs256";
 pub struct TestServer {
     pub base: String,
     pub http: reqwest::Client,
+    /// The server's own database, for tests that check rows directly.
+    pub pool: PgPool,
 }
 
 pub struct Session {
@@ -31,9 +33,9 @@ pub struct Session {
     pub user_id: String,
 }
 
-/// Starts a server on a fresh database. Returns `None` when `TEST_DATABASE_URL` is unset, so
-/// `cargo test` still runs without Postgres. Set it to run the server tests.
-pub async fn spawn(registration_open: bool) -> Option<TestServer> {
+/// A new, unmigrated database on the Postgres server named by `TEST_DATABASE_URL`. `None` when
+/// that variable is unset.
+pub async fn empty_database() -> Option<PgPool> {
     let Ok(admin_url) = std::env::var("TEST_DATABASE_URL") else {
         eprintln!("skipping sync-server integration test: set TEST_DATABASE_URL to run it");
         return None;
@@ -46,21 +48,28 @@ pub async fn spawn(registration_open: bool) -> Option<TestServer> {
     admin.close().await;
 
     let (server_url, _) = admin_url.rsplit_once('/').expect("TEST_DATABASE_URL has a database name");
-    let pool = PgPool::connect(&format!("{server_url}/{name}")).await.expect("connect to test database");
+    Some(PgPool::connect(&format!("{server_url}/{name}")).await.expect("connect to test database"))
+}
+
+/// Starts a server on a fresh database. Returns `None` when `TEST_DATABASE_URL` is unset, so
+/// `cargo test` still runs without Postgres. Set it to run the server tests.
+pub async fn spawn(registration_open: bool) -> Option<TestServer> {
+    let pool = empty_database().await?;
     db::migrate(&pool).await.expect("migrate test database");
 
     let state = AppState {
-        pool,
+        pool: pool.clone(),
         jwt_secret: Arc::from(SECRET.as_bytes()),
         registration_open,
         hub: Hub::default(),
+        join_throttle: Default::default(),
     };
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind test port");
     let addr = listener.local_addr().expect("test port address");
     tokio::spawn(async move {
         axum::serve(listener, router(state)).await.expect("test server");
     });
-    Some(TestServer { base: format!("http://{addr}"), http: reqwest::Client::new() })
+    Some(TestServer { base: format!("http://{addr}"), http: reqwest::Client::new(), pool })
 }
 
 /// A timestamp `seconds` before now, in the `updated_at` format. Relative to now so that the
@@ -117,6 +126,7 @@ impl TestServer {
         }
     }
 
+    /// Creates a family as `token`'s user. Returns the family as the owner sees it.
     pub async fn create_family(&self, token: &str, name: &str) -> Value {
         let response = self
             .http
@@ -128,6 +138,28 @@ impl TestServer {
             .expect("create family request");
         assert_eq!(response.status(), 201);
         response.json().await.expect("family body")
+    }
+
+    /// `owner` makes an invite for `family_id` and `guest` accepts it.
+    pub async fn join_family(&self, owner: &str, family_id: &str, guest: &str) {
+        let invite = self
+            .http
+            .post(self.url(&format!("/family/{family_id}/invites")))
+            .bearer_auth(owner)
+            .send()
+            .await
+            .expect("invite request");
+        assert_eq!(invite.status(), 201, "owner should be able to invite");
+        let code = invite.json::<Value>().await.expect("invite body")["code"].as_str().expect("code").to_string();
+        let joined = self
+            .http
+            .post(self.url("/family/join"))
+            .bearer_auth(guest)
+            .json(&json!({ "invite_code": code }))
+            .send()
+            .await
+            .expect("join request");
+        assert_eq!(joined.status(), 200, "guest should join with a fresh code");
     }
 
     pub async fn push(&self, token: &str, client_id: &str, ops: Value) -> reqwest::Response {
@@ -191,16 +223,21 @@ pub struct EventStream {
 }
 
 impl EventStream {
-    /// Waits for the next event and returns its seq. Panics if none arrives within 5 seconds.
+    /// Waits for the next `op_ready` event and returns its seq.
     pub async fn next_seq(&mut self) -> i64 {
+        let event = self.next_event().await;
+        assert_eq!(event.kind, SseEvent::OP_READY);
+        event.seq
+    }
+
+    /// Waits for the next event of any kind. Panics if none arrives within 5 seconds.
+    pub async fn next_event(&mut self) -> SseEvent {
         loop {
             if let Some(end) = self.buffer.find("\n\n") {
                 let block: String = self.buffer.drain(..end + 2).collect();
                 for line in block.lines() {
                     if let Some(data) = line.strip_prefix("data:") {
-                        let event: SseEvent = serde_json::from_str(data.trim()).expect("event json");
-                        assert_eq!(event.kind, SseEvent::OP_READY);
-                        return event.seq;
+                        return serde_json::from_str(data.trim()).expect("event json");
                     }
                 }
                 continue;

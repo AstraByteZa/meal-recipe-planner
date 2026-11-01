@@ -11,6 +11,7 @@ use axum::Json;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
+use shared_core::wire::UserDto;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -71,13 +72,6 @@ pub struct LoginRequest {
 #[derive(Deserialize)]
 pub struct UpdateMeRequest {
     pub display_name: Option<String>,
-}
-
-#[derive(Clone, Serialize, FromRow)]
-pub struct UserDto {
-    pub id: Uuid,
-    pub email: String,
-    pub display_name: String,
 }
 
 #[derive(FromRow)]
@@ -171,11 +165,19 @@ pub async fn update_me(
 }
 
 async fn load_user(state: &AppState, id: Uuid) -> ApiResult<UserDto> {
-    sqlx::query_as::<_, UserDto>("SELECT id, email, display_name FROM users WHERE id = $1")
+    let row = sqlx::query_as::<_, ProfileRow>("SELECT id, email, display_name FROM users WHERE id = $1")
         .bind(id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or(ApiError::Unauthorized)
+        .ok_or(ApiError::Unauthorized)?;
+    Ok(UserDto { id: row.id, email: row.email, display_name: row.display_name })
+}
+
+#[derive(FromRow)]
+struct ProfileRow {
+    id: Uuid,
+    email: String,
+    display_name: String,
 }
 
 fn normalize_email(email: &str) -> ApiResult<String> {

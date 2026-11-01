@@ -9,8 +9,10 @@ use crate::keep_awake::KeepAwakeLock;
 use crate::models::{PlannedMeal, RecipeDetail, RecipeInput, SavedRecipe, Settings, SettingsInput, Track, TrackInput};
 use crate::repo::{config, recipes, schedule, settings};
 use crate::scrape::{self, ScrapedRecipe};
-use crate::sync::SyncHandle;
+use shared_core::wire::{FamilyDetails, InviteDto, InvitePreview};
+
 use crate::sync::account::{self, SyncStatus};
+use crate::sync::{SyncHandle, family};
 
 #[tauri::command]
 pub async fn recipes_list(db: State<'_, SqlitePool>) -> Result<Vec<SavedRecipe>, AppError> {
@@ -163,8 +165,9 @@ pub async fn sync_register(
     server_url: String,
     email: String,
     password: String,
+    display_name: Option<String>,
 ) -> Result<SyncStatus, AppError> {
-    account::register(&db, &sync, &server_url, &email, &password).await
+    account::register(&db, &sync, &server_url, &email, &password, &display_name.unwrap_or_default()).await
 }
 
 #[tauri::command]
@@ -181,6 +184,16 @@ pub async fn sync_login(
 #[tauri::command]
 pub async fn sync_logout(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>) -> Result<SyncStatus, AppError> {
     account::logout(&db, &sync).await
+}
+
+#[tauri::command]
+pub async fn sync_set_name(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>, name: String) -> Result<SyncStatus, AppError> {
+    account::set_display_name(&db, &sync, &name).await
+}
+
+#[tauri::command]
+pub async fn sync_reset_to_local(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>) -> Result<SyncStatus, AppError> {
+    account::reset_to_local(&db, &sync).await
 }
 
 #[tauri::command]
@@ -204,4 +217,53 @@ pub async fn family_join(
     invite_code: String,
 ) -> Result<SyncStatus, AppError> {
     account::family_join(&db, &sync, &invite_code).await
+}
+
+#[tauri::command]
+pub async fn family_details(db: State<'_, SqlitePool>) -> Result<FamilyDetails, AppError> {
+    family::details(&db).await
+}
+
+#[tauri::command]
+pub async fn family_invite_create(db: State<'_, SqlitePool>) -> Result<InviteDto, AppError> {
+    family::invite_create(&db).await
+}
+
+#[tauri::command]
+pub async fn family_invite_revoke(db: State<'_, SqlitePool>, invite_id: String) -> Result<(), AppError> {
+    family::invite_revoke(&db, &invite_id).await
+}
+
+#[tauri::command]
+pub async fn family_invite_preview(db: State<'_, SqlitePool>, invite_code: String) -> Result<InvitePreview, AppError> {
+    family::invite_preview(&db, &invite_code).await
+}
+
+#[tauri::command]
+pub async fn family_rename(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>, name: String) -> Result<SyncStatus, AppError> {
+    family::rename(&db, &sync, &name).await
+}
+
+#[tauri::command]
+pub async fn family_member_remove(
+    db: State<'_, SqlitePool>,
+    sync: State<'_, SyncHandle>,
+    user_id: String,
+) -> Result<SyncStatus, AppError> {
+    family::member_remove(&db, &sync, &user_id).await
+}
+
+#[tauri::command]
+pub async fn family_transfer(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>, user_id: String) -> Result<SyncStatus, AppError> {
+    family::transfer(&db, &sync, &user_id).await
+}
+
+#[tauri::command]
+pub async fn family_delete(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>) -> Result<SyncStatus, AppError> {
+    family::delete(&db, &sync).await
+}
+
+#[tauri::command]
+pub async fn sync_dismiss_notice(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>) -> Result<SyncStatus, AppError> {
+    account::dismiss_notice(&db, &sync).await
 }
