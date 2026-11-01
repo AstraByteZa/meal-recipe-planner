@@ -103,7 +103,13 @@ describe("accountFormSchema", () => {
 describe("familyJoinSchema", () => {
 	it("rejects a blank invite code", () => {
 		expect(familyJoinSchema.safeParse({ inviteCode: "   " }).success).toBe(false);
-		expect(familyJoinSchema.safeParse({ inviteCode: " ABC123 " }).success).toBe(true);
+		expect(familyJoinSchema.safeParse({ inviteCode: "" }).success).toBe(false);
+	});
+
+	it("needs the full eight characters, with or without the dash", () => {
+		expect(familyJoinSchema.safeParse({ inviteCode: "ABC123" }).success).toBe(false);
+		expect(familyJoinSchema.safeParse({ inviteCode: "k7m2-qx9p" }).success).toBe(true);
+		expect(familyJoinSchema.safeParse({ inviteCode: "K7M2QX9P" }).success).toBe(true);
 	});
 });
 

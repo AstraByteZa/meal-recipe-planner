@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeInviteCode } from "./format";
 
 /** Sync state from the `sync_*` and `family_*` commands. Mirrors `SyncStatus` in src-tauri. */
 export const syncStatusSchema = z.object({
@@ -82,5 +83,9 @@ export const familyCreateSchema = z.object({
 });
 
 export const familyJoinSchema = z.object({
-	inviteCode: z.string().trim().min(1, "Enter the invite code"),
+	inviteCode: z.string().superRefine((value, ctx) => {
+		const length = normalizeInviteCode(value).length;
+		if (length === 0) ctx.addIssue({ code: "custom", message: "Enter the invite code" });
+		else if (length !== 8) ctx.addIssue({ code: "custom", message: "Invite codes have 8 characters" });
+	}),
 });

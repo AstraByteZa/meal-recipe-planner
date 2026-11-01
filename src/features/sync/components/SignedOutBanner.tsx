@@ -2,8 +2,8 @@ import { useState } from "react";
 import { IconCloudOff, IconX } from "@tabler/icons-react";
 import { ActionIcon, Button, Group, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { syncStatusQueryOptions } from "../queries";
-import { openSyncSettingsModal } from "../modals/SyncSettingsModal";
 import classes from "./SignedOutBanner.module.css";
 
 export const SIGNED_OUT_BANNER_KEY = "signedOutBannerDismissed";
@@ -14,6 +14,7 @@ export const SIGNED_OUT_BANNER_KEY = "signedOutBannerDismissed";
  */
 export function SignedOutBanner() {
 	const { data: status } = useQuery(syncStatusQueryOptions);
+	const navigate = useNavigate();
 	const [dismissed, setDismissed] = useState(() => localStorage.getItem(SIGNED_OUT_BANNER_KEY) === "true");
 
 	if (!status || status.mode === "signed_in" || dismissed) return null;
@@ -29,7 +30,7 @@ export function SignedOutBanner() {
 			You're not signed in. Your plans and recipes stay on this device. Sign in to sync them and share with a family.
 		</Text>
 		<Group gap="xs" wrap="nowrap">
-			<Button size="xs" variant="default" onClick={openSyncSettingsModal}>Sign in</Button>
+			<Button size="xs" variant="default" onClick={() => navigate({ to: "/sign-in" })}>Sign in</Button>
 			<ActionIcon variant="subtle" color="gray" aria-label="Dismiss" onClick={dismiss}>
 				<IconX size={14} stroke={1.5} />
 			</ActionIcon>

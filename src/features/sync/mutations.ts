@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { syncStatusQueryKey } from "./queries";
-import { syncStatusSchema } from "./schema";
+import { invitePreviewSchema, syncStatusSchema } from "./schema";
 
 /**
  * Runs a sync command and stores the status it returns. Errors are not caught here: the Rust
@@ -56,4 +56,15 @@ export function useFamilyCreate() {
 
 export function useFamilyJoin() {
 	return useSyncCommand<{ inviteCode: string }>("family_join");
+}
+
+/**
+ * Looks up an invite code without using it. The result is not stored in the status cache: the
+ * caller shows it and decides whether to accept.
+ */
+export function useFamilyPreview() {
+	return useMutation({
+		mutationFn: async (args: { inviteCode: string }) =>
+			invitePreviewSchema.parse(await invoke<unknown>("family_invite_preview", args)),
+	});
 }
