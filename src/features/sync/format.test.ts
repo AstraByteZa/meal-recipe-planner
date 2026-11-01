@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expiresIn, formatInviteCode, normalizeInviteCode, relativeTime } from "./format";
+import { expiresIn, formatInviteCode, noticeText, normalizeInviteCode, relativeTime } from "./format";
 
 const now = new Date("2026-11-01T12:00:00.000Z");
 
@@ -47,5 +47,12 @@ describe("expiresIn", () => {
 describe("relativeTime", () => {
 	it("describes how long ago a time was", () => {
 		expect(relativeTime("2026-11-01T11:58:00.000Z", now)).toBe("2 minutes ago");
+	});
+});
+
+describe("noticeText", () => {
+	it("says removed by default and deleted for a deleted family", () => {
+		expect(noticeText("removed", "The Morgans")).toContain("You were removed from The Morgans");
+		expect(noticeText("deleted", "The Morgans")).toBe("The Morgans was deleted by its owner.");
 	});
 });

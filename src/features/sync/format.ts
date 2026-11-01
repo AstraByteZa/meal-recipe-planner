@@ -33,3 +33,9 @@ export function expiresIn(expiresAt: string, now: Date): string {
 export function relativeTime(iso: string, now: Date): string {
 	return dayjs(iso).from(dayjs(now));
 }
+
+/** The text on the removed or deleted banner. */
+export function noticeText(kind: string, familyName: string): string {
+	if (kind === "deleted") return `${familyName} was deleted by its owner.`;
+	return `You were removed from ${familyName}. Your recipes are kept on this device as private data.`;
+}

@@ -1,14 +1,12 @@
-import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { modals, type ContextModalProps } from "@mantine/modals";
-import { Alert, Button, Group, Stack, Text, TextInput } from "@mantine/core";
+import { Alert, Button, Group, Stack, Text } from "@mantine/core";
 import dayjs from "../../../lib/dayjs";
 import { AccountForm } from "../components/AccountForm";
-import { InviteCodeInput } from "../components/InviteCodeInput";
-import { fieldError } from "../components/formErrors";
+import { FamilyStartCards } from "../components/FamilyStartCards";
 import { syncStatusQueryOptions } from "../queries";
-import { useFamilyCreate, useFamilyJoin, useSyncLogout, useSyncNow } from "../mutations";
-import { familyCreateSchema, familyJoinSchema, type SyncStatus } from "../schema";
+import { useSyncLogout, useSyncNow } from "../mutations";
+import type { SyncStatus } from "../schema";
 import classes from "./SyncSettingsModal.module.css";
 
 export function openSyncSettingsModal() {
@@ -45,10 +43,7 @@ export function SyncSettingsModal(_props: ContextModalProps) {
 						: "Recipes and meal plans added from now on are shared with the family."}
 				</Text>
 			</div>
-			: <>
-				<CreateFamilyCard />
-				<JoinFamilyCard />
-			</>}
+			: <FamilyStartCards />}
 	</Stack>;
 }
 
@@ -100,80 +95,4 @@ function SyncRow({ status }: { status: SyncStatus }) {
 		{status.lastError && <Alert color="red" title="Last sync failed">{status.lastError}</Alert>}
 		{syncNow.isError && <Alert color="red" title="Could not sync">{String(syncNow.error)}</Alert>}
 	</Stack>;
-}
-
-function CreateFamilyCard() {
-	const create = useFamilyCreate();
-	const form = useForm({
-		defaultValues: { name: "" },
-		validators: { onChange: familyCreateSchema },
-		onSubmit: ({ value }) => {
-			create.mutate({ name: value.name.trim() }, { onSuccess: () => form.reset() });
-		},
-	});
-
-	return <div className={classes.card}>
-		<Stack gap={2}>
-			<Text fw={600}>Create a family</Text>
-			<Text size="sm" c="dimmed">Share recipes and plans with people you cook with. You become the family owner.</Text>
-		</Stack>
-		<form onSubmit={(event) => {
-			event.preventDefault();
-			form.handleSubmit();
-		}}>
-			<Stack gap="sm">
-				<form.Field name="name">
-					{(field) => <TextInput
-						label="Family name"
-						placeholder="e.g. The Joostes"
-						value={field.state.value}
-						onChange={(event) => field.handleChange(event.currentTarget.value)}
-						onBlur={field.handleBlur}
-						error={fieldError(field) ?? (create.isError ? String(create.error) : undefined)}
-					/>}
-				</form.Field>
-				<Group justify="flex-end">
-					<Button type="submit" loading={create.isPending}>Create family</Button>
-				</Group>
-			</Stack>
-		</form>
-	</div>;
-}
-
-function JoinFamilyCard() {
-	const join = useFamilyJoin();
-	const form = useForm({
-		defaultValues: { inviteCode: "" },
-		validators: { onChange: familyJoinSchema },
-		onSubmit: ({ value }) => {
-			join.mutate({ inviteCode: value.inviteCode }, { onSuccess: () => form.reset() });
-		},
-	});
-
-	return <div className={classes.card}>
-		<Stack gap={2}>
-			<Text fw={600}>Join a family</Text>
-			<Text size="sm" c="dimmed">Ask the family owner for an invite code.</Text>
-		</Stack>
-		<form onSubmit={(event) => {
-			event.preventDefault();
-			form.handleSubmit();
-		}}>
-			<Stack gap="sm">
-				<form.Field name="inviteCode">
-					{(field) => <InviteCodeInput
-						label="Invite code"
-						placeholder="XXXX-XXXX"
-						value={field.state.value}
-						onChange={(value) => field.handleChange(value)}
-						onBlur={field.handleBlur}
-						error={fieldError(field) ?? (join.isError ? String(join.error) : undefined)}
-					/>}
-				</form.Field>
-				<Group justify="flex-end">
-					<Button type="submit" variant="default" loading={join.isPending}>Join family</Button>
-				</Group>
-			</Stack>
-		</form>
-	</div>;
 }

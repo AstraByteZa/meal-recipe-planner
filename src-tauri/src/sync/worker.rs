@@ -109,12 +109,16 @@ async fn session_loop(
                 }
                 event = stream.next_event() => {
                     let event = event?;
-                    if event.kind == SseEvent::MEMBERSHIP_CHANGED && family::reconcile(pool, &api).await? {
-                        // The family changed here, so the stream must subscribe to the new set.
-                        // A restart reloads the session and connects again.
+                    if event.kind == SseEvent::MEMBERSHIP_CHANGED {
+                        if family::reconcile(pool, &api).await? {
+                            // The family changed here, so the stream must subscribe to the new set.
+                            // A restart reloads the session and connects again.
+                            let _ = app.emit(CHANGED_EVENT, ());
+                            handle.restart();
+                            return Ok(());
+                        }
+                        // Someone else's membership changed. Refresh the Family screen.
                         let _ = app.emit(CHANGED_EVENT, ());
-                        handle.restart();
-                        return Ok(());
                     }
                     sync_once(app, pool, handle, &api, session).await?;
                 }

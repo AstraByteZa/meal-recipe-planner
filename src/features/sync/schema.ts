@@ -49,6 +49,16 @@ export const familyDetailsSchema = z.object({
 
 export type FamilyDetails = z.infer<typeof familyDetailsSchema>;
 
+/** A new invite code, returned when the owner creates one. */
+export const familyInviteSchema = z.object({
+	id: z.string(),
+	code: z.string(),
+	created_at: z.string(),
+	expires_at: z.string(),
+});
+
+export type FamilyInvite = z.infer<typeof familyInviteSchema>;
+
 /** What an invite code leads to. Checking a code does not use it. */
 export const invitePreviewSchema = z.object({
 	family_name: z.string(),
@@ -78,7 +88,7 @@ export const accountFormSchema = z.object({
 		.max(1024, "Use at most 1024 characters"),
 });
 
-export const familyCreateSchema = z.object({
+export const familyNameSchema = z.object({
 	name: z.string().trim().min(1, "Give the family a name"),
 });
 

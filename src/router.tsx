@@ -26,7 +26,7 @@ import { OnboardingView } from './features/onboarding/views/OnboardingView'
 import { FamilyView } from './features/family/views/FamilyView'
 import { SignInView } from './features/sync/views/SignInView'
 import { JoinView } from './features/sync/views/JoinView'
-import { syncStatusQueryOptions } from './features/sync/queries'
+import { familyDetailsQueryOptions, syncStatusQueryOptions } from './features/sync/queries'
 import { toNextPath } from './features/sync/nextPath'
 import { toStep } from './features/onboarding/steps'
 import { settingsQueryOptions } from './features/settings/queries'
@@ -204,10 +204,21 @@ const joinRoute = createRoute({
   component: JoinView,
 })
 
-// Placeholder until the Family page lands. The nav item only shows for signed-in accounts.
+// The nav item only shows for signed-in accounts. The page itself handles the signed-out state.
 const familyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/family',
+  loader: async ({ context }) => {
+    const status = await context.queryClient.query(syncStatusQueryOptions)
+    if (!status.family) return
+    // Offline is shown on the page, so a failed details fetch must not become a route error.
+    try {
+      await context.queryClient.query(familyDetailsQueryOptions(status.family.id))
+    } catch {
+      // The view reports the error itself.
+    }
+  },
+  pendingComponent: RouteLoader,
   component: FamilyView,
 })
 
