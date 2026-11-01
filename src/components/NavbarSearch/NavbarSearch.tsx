@@ -1,17 +1,29 @@
-import { IconCalendarWeek, IconCircleDot, IconLink, IconSearch } from '@tabler/icons-react';
-import { Box, Code, Text, TextInput } from '@mantine/core';
+import { IconCalendarWeek, IconCircleDot, IconLink, IconUsers } from '@tabler/icons-react';
+import { Box, Text } from '@mantine/core';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { WeekProgress } from '../../features/planner/components/WeekProgress';
-import { SyncButton } from '../../features/sync/components/SyncButton';
+import { AccountButton } from '../../features/sync/components/AccountButton';
+import { SyncChip } from '../../features/sync/components/SyncChip';
+import { syncStatusQueryOptions } from '../../features/sync/queries';
 import classes from './NavbarSearch.module.css';
 
-const links: { icon: typeof IconCalendarWeek; label: string; to: '/' | '/recipes' }[] = [
+type NavTo = '/' | '/recipes' | '/family';
+
+const links: { icon: typeof IconCalendarWeek; label: string; to: NavTo }[] = [
   { icon: IconCalendarWeek, label: 'Schedule', to: '/' },
   { icon: IconLink, label: 'Recipe links', to: '/recipes' },
 ];
 
 export function NavbarSearch() {
-  const mainLinks = links.map((link) => (
+  const { data: status } = useQuery(syncStatusQueryOptions);
+  // Family only exists for signed-in accounts, so the item is hidden until then.
+  const familyLink = status?.mode === 'signed_in'
+    ? { icon: IconUsers, label: 'Family', to: '/family' as NavTo }
+    : null;
+  const allLinks = familyLink ? [...links, familyLink] : links;
+
+  const mainLinks = allLinks.map((link) => (
     <Link
       key={link.label}
       to={link.to}
@@ -33,22 +45,14 @@ export function NavbarSearch() {
         <Text fw={700} size="lg">Mise</Text>
       </div>
 
-      <TextInput
-        placeholder="Search"
-        size="xs"
-        leftSection={<IconSearch size={12} stroke={1.5} />}
-        rightSectionWidth={70}
-        rightSection={<Code className={classes.searchCode}>Ctrl + K</Code>}
-        styles={{ section: { pointerEvents: 'none' } }}
-        mb="md"
-        aria-label="Search"
-      />
-
       <div className={classes.mainLinks}>{mainLinks}</div>
 
       <div className={classes.footer}>
-        <SyncButton />
         <WeekProgress />
+        <div className={classes.sync}>
+          <SyncChip />
+          <AccountButton />
+        </div>
       </div>
     </nav>
   );

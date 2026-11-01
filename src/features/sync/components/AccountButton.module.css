@@ -1,0 +1,37 @@
+.account {
+	display: flex;
+	align-items: center;
+	gap: var(--mantine-spacing-sm);
+	width: 100%;
+	padding: var(--mantine-spacing-xs);
+	border-radius: var(--mantine-radius-sm);
+	text-align: left;
+	color: light-dark(var(--mantine-color-black), var(--mantine-color-dark-0));
+
+	@mixin hover {
+		background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+	}
+}
+
+.text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.name {
+	font-size: var(--mantine-font-size-sm);
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.email {
+	font-size: var(--mantine-font-size-xs);
+	color: var(--mantine-color-dimmed);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

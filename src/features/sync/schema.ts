@@ -19,9 +19,44 @@ export const syncStatusSchema = z.object({
 	lastSyncedAt: z.string().nullable(),
 	lastError: z.string().nullable(),
 	lastErrorKind: z.enum(["unauthorized", "unreachable", "other"]).nullable(),
+	/** Set after this device was removed from a family, until the user dismisses it. */
+	notice: z.object({ kind: z.string(), familyName: z.string() }).nullable(),
 });
 
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
+
+export const familyRoleSchema = z.enum(["owner", "member"]);
+export type FamilyRole = z.infer<typeof familyRoleSchema>;
+
+/** Family details use the server's field names as they are, without camelCase. */
+export const familyDetailsSchema = z.object({
+	family: z.object({ id: z.string(), name: z.string(), role: familyRoleSchema }),
+	members: z.array(
+		z.object({
+			user_id: z.string(),
+			name: z.string(),
+			email: z.string(),
+			role: familyRoleSchema,
+			joined_at: z.string(),
+		}),
+	),
+	/** Empty unless the caller is the owner. */
+	invites: z.array(
+		z.object({ id: z.string(), code: z.string(), created_at: z.string(), expires_at: z.string() }),
+	),
+});
+
+export type FamilyDetails = z.infer<typeof familyDetailsSchema>;
+
+/** What an invite code leads to. Checking a code does not use it. */
+export const invitePreviewSchema = z.object({
+	family_name: z.string(),
+	invited_by: z.string(),
+	member_count: z.number().int().nonnegative(),
+	member_names: z.array(z.string()),
+});
+
+export type InvitePreview = z.infer<typeof invitePreviewSchema>;
 
 function isHttpUrl(value: string) {
 	try {

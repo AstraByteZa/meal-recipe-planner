@@ -7,6 +7,7 @@ import { FillTheGaps } from "../components/FillTheGaps";
 import { openManageTracksModal } from "../modals/ManageTracksModal";
 import { PastWeeks } from "../components/PastWeeks";
 import { PlannerSchedule } from "../components/PlannerSchedule";
+import { SignedOutBanner } from "../../sync/components/SignedOutBanner";
 import { scheduleQueryOptions, tracksQueryOptions } from "../queries";
 import { formatWeekRange } from "../format";
 import { currentWeek, shiftWeek } from "../week";
@@ -23,6 +24,8 @@ export function MealPlannerView() {
 	const isoYear = weekStart.add(3, "day").year();
 
 	return <div className={classes.view}>
+		<SignedOutBanner />
+
 		<header className={classes.header}>
 			<div>
 				<Text size="xs" c="dimmed" className={classes.eyebrow}>

@@ -23,6 +23,7 @@ import { RecipeEditView } from './features/recipes/views/RecipeEditView'
 import { CookModeView } from './features/recipes/views/CookModeView'
 import { toCookStep } from './features/recipes/cook/steps'
 import { OnboardingView } from './features/onboarding/views/OnboardingView'
+import { FamilyView } from './features/family/views/FamilyView'
 import { toStep } from './features/onboarding/steps'
 import { settingsQueryOptions } from './features/settings/queries'
 import { configQueryOptions } from './features/config/queries'
@@ -164,6 +165,13 @@ const onboardingRoute = createRoute({
   component: OnboardingPage,
 })
 
+// Placeholder until the Family page lands. The nav item only shows for signed-in accounts.
+const familyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/family',
+  component: FamilyView,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   aboutRoute,
@@ -172,6 +180,7 @@ const routeTree = rootRoute.addChildren([
   recipeEditRoute,
   recipeCookRoute,
   onboardingRoute,
+  familyRoute,
 ])
 
 export const router = createRouter({ routeTree, context: { queryClient } })
