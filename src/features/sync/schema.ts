@@ -2,16 +2,23 @@ import { z } from "zod";
 
 /** Sync state from the `sync_*` and `family_*` commands. Mirrors `SyncStatus` in src-tauri. */
 export const syncStatusSchema = z.object({
+	/** `local`: never signed in. `signed_out`: linked, no token. `signed_in`: syncing. */
+	mode: z.enum(["local", "signed_out", "signed_in"]),
 	signedIn: z.boolean(),
 	serverUrl: z.string().nullable(),
-	email: z.string().nullable(),
+	/** The address built into the app. Pre-fills the server field. */
+	defaultServerUrl: z.string().nullable(),
+	/** Only while signed in. `name` is the display name, or the email's local part. */
+	user: z.object({ name: z.string(), email: z.string() }).nullable(),
 	family: z
-		.object({ id: z.string(), name: z.string() })
+		.object({ id: z.string(), name: z.string(), role: z.enum(["owner", "member"]) })
 		.nullable(),
+	/** Always 0 unless signed in. */
 	pending: z.number().int().nonnegative(),
 	syncing: z.boolean(),
 	lastSyncedAt: z.string().nullable(),
 	lastError: z.string().nullable(),
+	lastErrorKind: z.enum(["unauthorized", "unreachable", "other"]).nullable(),
 });
 
 export type SyncStatus = z.infer<typeof syncStatusSchema>;

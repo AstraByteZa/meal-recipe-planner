@@ -52,6 +52,8 @@ pub fn run() {
             commands::sync_login,
             commands::sync_logout,
             commands::sync_now,
+            commands::sync_set_name,
+            commands::sync_reset_to_local,
             commands::family_create,
             commands::family_join,
         ])

@@ -163,8 +163,9 @@ pub async fn sync_register(
     server_url: String,
     email: String,
     password: String,
+    display_name: Option<String>,
 ) -> Result<SyncStatus, AppError> {
-    account::register(&db, &sync, &server_url, &email, &password).await
+    account::register(&db, &sync, &server_url, &email, &password, &display_name.unwrap_or_default()).await
 }
 
 #[tauri::command]
@@ -181,6 +182,16 @@ pub async fn sync_login(
 #[tauri::command]
 pub async fn sync_logout(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>) -> Result<SyncStatus, AppError> {
     account::logout(&db, &sync).await
+}
+
+#[tauri::command]
+pub async fn sync_set_name(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>, name: String) -> Result<SyncStatus, AppError> {
+    account::set_display_name(&db, &sync, &name).await
+}
+
+#[tauri::command]
+pub async fn sync_reset_to_local(db: State<'_, SqlitePool>, sync: State<'_, SyncHandle>) -> Result<SyncStatus, AppError> {
+    account::reset_to_local(&db, &sync).await
 }
 
 #[tauri::command]

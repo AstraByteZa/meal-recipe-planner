@@ -75,7 +75,7 @@ fn devices_share_recipes_edits_deletes_and_families() {
         let stranger = Device::new().await;
 
         // The laptop signs up, makes a private recipe in a slot, and pushes it.
-        account::register(&laptop.pool, &laptop.handle, &url, &email, PASSWORD).await.unwrap();
+        account::register(&laptop.pool, &laptop.handle, &url, &email, PASSWORD, "").await.unwrap();
         let oats = recipes::create(&laptop.pool, &recipe("Overnight oats", &["Breakfast"])).await.unwrap();
         schedule::set_entry(&laptop.pool, DATE, "dinner", &oats).await.unwrap();
         laptop.push().await;
@@ -140,7 +140,7 @@ fn devices_share_recipes_edits_deletes_and_families() {
         assert_eq!(slots, 0, "its planned meals should be gone too");
 
         // A second account must not see the private recipes of the first.
-        account::register(&stranger.pool, &stranger.handle, &url, &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD)
+        account::register(&stranger.pool, &stranger.handle, &url, &format!("e2e-{}@example.test", Uuid::new_v4()), PASSWORD, "")
             .await
             .unwrap();
         stranger.pull().await;

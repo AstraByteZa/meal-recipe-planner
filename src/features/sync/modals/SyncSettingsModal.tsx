@@ -64,7 +64,7 @@ function StatusSummary({ status }: { status: SyncStatus }) {
 		: "Not synced yet";
 
 	return <Stack gap={4}>
-		<Text fw={500}>{status.signedIn ? `Signed in as ${status.email}` : "Not signed in"}</Text>
+		<Text fw={500}>{status.signedIn ? `Signed in as ${status.user?.email}` : "Not signed in"}</Text>
 		<Text size="sm" c="dimmed">
 			{status.signedIn
 				? `Server: ${status.serverUrl}`

@@ -47,7 +47,7 @@ async fn run(app: AppHandle, pool: SqlitePool, handle: SyncHandle) {
                 continue;
             }
             Err(error) => {
-                handle.set_error(error.to_string());
+                handle.set_error("other", error.to_string());
                 wait_or_timeout(&handle, backoff).await;
                 backoff = next_backoff(backoff);
                 continue;
@@ -57,12 +57,13 @@ async fn run(app: AppHandle, pool: SqlitePool, handle: SyncHandle) {
         match session_loop(&app, &pool, &handle, &session, &mut backoff).await {
             // A restart or sign-out ends the session cleanly.
             Ok(()) => {}
+            // The token is no longer valid. Stop, and wait for the user to sign in again.
             Err(SyncError::Unauthorized(message)) => {
-                handle.set_error(message);
+                handle.set_error("unauthorized", message);
                 handle.woken().await;
             }
             Err(error) => {
-                handle.set_error(error.to_string());
+                handle.set_error(error.kind(), error.to_string());
                 wait_or_timeout(&handle, backoff).await;
                 backoff = next_backoff(backoff);
             }

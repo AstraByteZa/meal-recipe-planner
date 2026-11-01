@@ -7,7 +7,7 @@ use std::time::Duration;
 use reqwest::{Client, Response, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use shared_core::wire::{FamilyRole, InviteDto, PullResponse, PushRequest, PushResponse, SseEvent};
+use shared_core::wire::{FamilyRole, InviteDto, PullResponse, PushRequest, PushResponse, SseEvent, UserDto};
 
 use crate::error::AppError;
 
@@ -38,6 +38,17 @@ impl fmt::Display for SyncError {
     }
 }
 
+impl SyncError {
+    /// The kind the status reports, so the UI can pick a chip without parsing the message.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            SyncError::Unauthorized(_) => "unauthorized",
+            SyncError::Unreachable(_) => "unreachable",
+            SyncError::Rejected(_) | SyncError::Local(_) => "other",
+        }
+    }
+}
+
 impl From<AppError> for SyncError {
     fn from(error: AppError) -> Self {
         SyncError::Local(error)
@@ -57,12 +68,6 @@ impl From<SyncError> for AppError {
             other => AppError::Platform(other.to_string()),
         }
     }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct UserDto {
-    pub id: String,
-    pub email: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -102,8 +107,17 @@ impl Api {
         })
     }
 
-    pub async fn register(&self, email: &str, password: &str) -> Result<AuthResponse, SyncError> {
-        self.post("/auth/register", &json!({ "email": email, "password": password })).await
+    pub async fn register(&self, email: &str, password: &str, display_name: &str) -> Result<AuthResponse, SyncError> {
+        self.post(
+            "/auth/register",
+            &json!({ "email": email, "password": password, "display_name": display_name }),
+        )
+        .await
+    }
+
+    /// Changes the signed-in user's display name. Returns the account as the server now has it.
+    pub async fn update_me(&self, display_name: &str) -> Result<UserDto, SyncError> {
+        self.patch("/me", &json!({ "display_name": display_name })).await
     }
 
     pub async fn login(&self, email: &str, password: &str) -> Result<AuthResponse, SyncError> {
@@ -165,8 +179,24 @@ impl Api {
         B: serde::Serialize + ?Sized,
         T: for<'de> Deserialize<'de>,
     {
+        self.send_json(self.http.post(self.url(path)), body).await
+    }
+
+    async fn patch<B, T>(&self, path: &str, body: &B) -> Result<T, SyncError>
+    where
+        B: serde::Serialize + ?Sized,
+        T: for<'de> Deserialize<'de>,
+    {
+        self.send_json(self.http.patch(self.url(path)), body).await
+    }
+
+    async fn send_json<B, T>(&self, request: reqwest::RequestBuilder, body: &B) -> Result<T, SyncError>
+    where
+        B: serde::Serialize + ?Sized,
+        T: for<'de> Deserialize<'de>,
+    {
         let response = self
-            .authorized(self.http.post(self.url(path)))
+            .authorized(request)
             .json(body)
             .timeout(REQUEST_TIMEOUT)
             .send()

@@ -17,6 +17,9 @@ pub mod client;
 pub mod outbox;
 pub mod worker;
 
+/// Set once the device is linked to an account. Until then it keeps no outbox.
+pub const USER_ID: &str = "user_id";
+
 #[cfg(test)]
 mod e2e;
 
@@ -82,6 +85,8 @@ struct Status {
     syncing: bool,
     last_synced_at: Option<String>,
     last_error: Option<String>,
+    /// `unauthorized`, `unreachable` or `other`. See `SyncError::kind`.
+    last_error_kind: Option<&'static str>,
 }
 
 /// A copy of the worker's status for the UI.
@@ -89,6 +94,7 @@ pub struct StatusSnapshot {
     pub syncing: bool,
     pub last_synced_at: Option<String>,
     pub last_error: Option<String>,
+    pub last_error_kind: Option<&'static str>,
 }
 
 impl SyncHandle {
@@ -120,14 +126,19 @@ impl SyncHandle {
         let mut status = self.status();
         status.last_synced_at = Some(at);
         status.last_error = None;
+        status.last_error_kind = None;
     }
 
-    pub fn set_error(&self, message: String) {
-        self.status().last_error = Some(message);
+    pub fn set_error(&self, kind: &'static str, message: String) {
+        let mut status = self.status();
+        status.last_error = Some(message);
+        status.last_error_kind = Some(kind);
     }
 
     pub fn clear_error(&self) {
-        self.status().last_error = None;
+        let mut status = self.status();
+        status.last_error = None;
+        status.last_error_kind = None;
     }
 
     pub fn snapshot(&self) -> StatusSnapshot {
@@ -136,6 +147,7 @@ impl SyncHandle {
             syncing: status.syncing,
             last_synced_at: status.last_synced_at.clone(),
             last_error: status.last_error.clone(),
+            last_error_kind: status.last_error_kind,
         }
     }
 
