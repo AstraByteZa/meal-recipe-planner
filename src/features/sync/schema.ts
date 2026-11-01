@@ -80,7 +80,11 @@ function isHttpUrl(value: string) {
 
 /** Sign in or register. The password rule matches the server's minimum. */
 export const accountFormSchema = z.object({
-	serverUrl: z.string().trim().refine(isHttpUrl, "Enter a full http:// or https:// address"),
+	/** Blank means the built-in server. A typed address must be a full http:// or https:// URL. */
+	serverUrl: z
+		.string()
+		.trim()
+		.refine((value) => value === "" || isHttpUrl(value), "Enter a full http:// or https:// address"),
 	email: z.string().trim().pipe(z.email("Enter a valid email address")),
 	password: z
 		.string()

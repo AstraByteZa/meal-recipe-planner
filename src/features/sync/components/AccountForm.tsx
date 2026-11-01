@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
-import { Alert, Anchor, Button, Stack, TextInput } from "@mantine/core";
+import { Accordion, Alert, Anchor, Button, Stack, TextInput } from "@mantine/core";
 import { z } from "zod";
 import { useSyncLogin, useSyncRegister } from "../mutations";
 import { accountFormSchema } from "../schema";
@@ -8,38 +8,36 @@ import { fieldError } from "./formErrors";
 import classes from "./AccountForm.module.css";
 
 interface AccountFormProps {
-	/** Pre-fills the server field. Usually the status' server URL or the build default. */
-	initialServerUrl: string;
-	/** Hides the server field behind "Advanced" when a valid default exists. */
-	advancedServer?: boolean;
+	/** A custom address to pre-fill. Blank when the device uses the built-in server. */
+	customServerUrl: string;
+	/** The built-in server of this build, if it has one. */
+	defaultServerUrl: string | null;
+	/** Whether Advanced Options starts open. */
+	startOpen: boolean;
 	onSignedIn?: () => void;
 }
 
 const formSchema = accountFormSchema.extend({ displayName: z.string() });
 
-const isValidServerUrl = (value: string) => accountFormSchema.shape.serverUrl.safeParse(value).success;
-
 /**
  * Sign in or register. Used on the sign-in page and in the sync settings modal, so both behave the
- * same way. Register adds an optional display name.
+ * same way. Register adds an optional display name. The server address is optional and lives in
+ * Advanced Options.
  */
-export function AccountForm({ initialServerUrl, advancedServer = false, onSignedIn }: AccountFormProps) {
+export function AccountForm({ customServerUrl, defaultServerUrl, startOpen, onSignedIn }: AccountFormProps) {
 	const [mode, setMode] = useState<"signIn" | "register">("signIn");
-	const [advancedOpen, setAdvancedOpen] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const login = useSyncLogin();
 	const register = useSyncRegister();
 	const attempt = mode === "register" ? register : login;
 
-	// Show the server field if there is no usable default, so the user can fix it.
-	const serverVisible = !advancedServer || advancedOpen || !isValidServerUrl(initialServerUrl);
-
 	const form = useForm({
-		defaultValues: { serverUrl: initialServerUrl, displayName: "", email: "", password: "" },
+		defaultValues: { serverUrl: customServerUrl, displayName: "", email: "", password: "" },
 		validators: { onChange: formSchema },
 		onSubmit: ({ value }) => {
 			const account = {
-				serverUrl: value.serverUrl.trim(),
+				// Blank sends no address, so the app uses the built-in server.
+				serverUrl: value.serverUrl.trim() || undefined,
 				email: value.email.trim(),
 				password: value.password,
 			};
@@ -58,20 +56,26 @@ export function AccountForm({ initialServerUrl, advancedServer = false, onSigned
 		form.handleSubmit();
 	}}>
 		<Stack gap="sm">
-			{serverVisible
-				? <form.Field name="serverUrl">
-					{(field) => <TextInput
-						label="Server address"
-						placeholder="https://sync.example.com"
-						value={field.state.value}
-						onChange={(event) => field.handleChange(event.currentTarget.value)}
-						onBlur={field.handleBlur}
-						error={fieldError(field)}
-					/>}
-				</form.Field>
-				: <Button variant="subtle" color="gray" size="compact-sm" className={classes.advanced} onClick={() => setAdvancedOpen(true)}>
-					Advanced: server address
-				</Button>}
+			<Accordion variant="contained" defaultValue={startOpen ? "advanced" : null}>
+				<Accordion.Item value="advanced">
+					<Accordion.Control>Advanced Options</Accordion.Control>
+					<Accordion.Panel>
+						<form.Field name="serverUrl">
+							{(field) => <TextInput
+								label="Server address"
+								description={defaultServerUrl
+									? `Leave blank to use ${defaultServerUrl}. Enter your own server's address to self-host.`
+									: "This build has no built-in server. Enter your server's address."}
+								placeholder="https://sync.example.com"
+								value={field.state.value}
+								onChange={(event) => field.handleChange(event.currentTarget.value)}
+								onBlur={field.handleBlur}
+								error={fieldError(field)}
+							/>}
+						</form.Field>
+					</Accordion.Panel>
+				</Accordion.Item>
+			</Accordion>
 
 			{mode === "register" && <form.Field name="displayName">
 				{(field) => <TextInput

@@ -1,7 +1,3 @@
-.advanced {
-	align-self: flex-start;
-}
-
 .passwordRow {
 	display: flex;
 	align-items: flex-end;

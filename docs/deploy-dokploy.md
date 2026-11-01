@@ -78,8 +78,12 @@ create one. Joining a family needs only an invite code, so closed registration d
 
 ## 7. Connect the app
 
-In the desktop app, open the sign-in screen and expand **Advanced** to enter
-`https://sync.example.com` as the server address. Sign in, then create a family or join one with
+In the desktop app, open the sign-in screen and expand **Advanced Options** to enter
+`https://sync.example.com` as the server address. Leave the address blank to use the built-in server
+of an official build instead. An address is only needed for a server you host yourself.
+
+To build an app that uses your server by default, set `PLANNER_SYNC_SERVER_URL` when you build it:
+`PLANNER_SYNC_SERVER_URL=https://sync.example.com pnpm tauri build`. Sign in, then create a family or join one with
 an invite code. Family owners create invite codes on the **Family** page. Each code works once and
 expires after 7 days.
 

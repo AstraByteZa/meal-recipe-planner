@@ -4,6 +4,7 @@ import { Anchor, Button, Stack, Text, Title } from "@mantine/core";
 import { AuthLayout } from "../../../components/AuthLayout/AuthLayout";
 import { AccountForm } from "../components/AccountForm";
 import { syncStatusQueryOptions } from "../queries";
+import { customServerUrl, startsOpen } from "../serverUrl";
 
 interface SignInViewProps {
 	/** The in-app page to return to after signing in. */
@@ -28,8 +29,9 @@ export function SignInView({ next }: SignInViewProps) {
 		</Stack>
 
 		{status && <AccountForm
-			initialServerUrl={status.serverUrl ?? status.defaultServerUrl ?? ""}
-			advancedServer
+			customServerUrl={customServerUrl(status)}
+			defaultServerUrl={status.defaultServerUrl}
+			startOpen={startsOpen(status)}
 			onSignedIn={goNext}
 		/>}
 

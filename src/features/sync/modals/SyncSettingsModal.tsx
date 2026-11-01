@@ -5,6 +5,7 @@ import dayjs from "../../../lib/dayjs";
 import { AccountForm } from "../components/AccountForm";
 import { FamilyStartCards } from "../components/FamilyStartCards";
 import { syncStatusQueryOptions } from "../queries";
+import { customServerUrl, startsOpen } from "../serverUrl";
 import { useSyncLogout, useSyncNow } from "../mutations";
 import type { SyncStatus } from "../schema";
 import classes from "./SyncSettingsModal.module.css";
@@ -26,7 +27,11 @@ export function SyncSettingsModal(_props: ContextModalProps) {
 				Sign in to sync this device. Until then, your data stays here.
 			</Text>
 			{status.lastError && <Alert color="red" title="Last sync failed">{status.lastError}</Alert>}
-			<AccountForm initialServerUrl={status.serverUrl ?? status.defaultServerUrl ?? ""} />
+			<AccountForm
+				customServerUrl={customServerUrl(status)}
+				defaultServerUrl={status.defaultServerUrl}
+				startOpen={startsOpen(status)}
+			/>
 		</Stack>;
 	}
 
