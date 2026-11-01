@@ -71,14 +71,27 @@ The image's own health check calls the same endpoint on the container's port 808
 
 ## 6. Create accounts, then close registration
 
-Register the household's accounts from the app (**Sync settings**). Then set
+Register the household's accounts from the app: open the sign-in screen and choose **Register**
+(the name is optional and falls back to the part of the email before `@`). Then set
 `REGISTRATION_OPEN=false` and redeploy. Existing accounts can still sign in, and nobody else can
 create one. Joining a family needs only an invite code, so closed registration does not block it.
 
 ## 7. Connect the app
 
-In the desktop app, open **Sync settings** and enter `https://sync.example.com` as the server.
-Sign in, then create a family or join one with its invite code.
+In the desktop app, open the sign-in screen and expand **Advanced** to enter
+`https://sync.example.com` as the server address. Sign in, then create a family or join one with
+an invite code. Family owners create invite codes on the **Family** page. Each code works once and
+expires after 7 days.
+
+The app stays fully usable without an account. A device that never signs in keeps its data
+locally.
+
+## Upgrading to family roles
+
+Release `0002_family_roles` drops the permanent invite code each family had. Existing families are
+not lost: the earliest member of each family becomes its owner, and the owner creates new invite
+codes. Tell family members that any old code no longer works. Take a backup first, as with any
+migration.
 
 ## Checking a deployment locally
 
@@ -95,6 +108,9 @@ curl -fsS http://localhost:8080/health
   than 32 bytes stops startup with a message that names the variable.
 - **Migration errors at startup:** the database is untouched by a failed migration, since each
   migration runs in a transaction. Fix the cause and redeploy.
+- **Join says "too many invite attempts":** a person who makes 10 failed join attempts within 15
+  minutes is blocked until enough of those failures age out of the window. Wait a few minutes, then
+  check the code with the owner.
 - **Clients see no live updates but do get changes on sync:** the stream may be going through a
   proxy that buffers responses. The server sends `X-Accel-Buffering: no`, which Traefik honours.
   Check that nothing else in front of Traefik buffers.
