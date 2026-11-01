@@ -7,7 +7,9 @@ use std::time::Duration;
 use reqwest::{Client, Response, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use shared_core::wire::{FamilyRole, InviteDto, PullResponse, PushRequest, PushResponse, SseEvent, UserDto};
+use shared_core::wire::{
+    FamilyDetails, FamilyRole, InviteDto, InvitePreview, PullResponse, PushRequest, PushResponse, SseEvent, UserDto,
+};
 
 use crate::error::AppError;
 
@@ -76,12 +78,10 @@ pub struct AuthResponse {
     pub user: UserDto,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct FamilyDto {
     pub id: String,
     pub name: String,
-    /// Read by the Family page, which lands in a later phase.
-    #[allow(dead_code)]
     pub role: FamilyRole,
 }
 
@@ -132,11 +132,47 @@ impl Api {
         self.post("/family/join", &json!({ "invite_code": invite_code })).await
     }
 
-    /// Creates a single-use invite code. Only the family owner may call this. The app calls it
-    /// from the Family page, which lands in a later phase; until then the e2e test uses it.
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// Every family this account is in, with the caller's role in each.
+    pub async fn families(&self) -> Result<Vec<FamilyDto>, SyncError> {
+        self.get("/family").await
+    }
+
+    pub async fn family_details(&self, family_id: &str) -> Result<FamilyDetails, SyncError> {
+        self.get(&format!("/family/{family_id}")).await
+    }
+
+    pub async fn rename_family(&self, family_id: &str, name: &str) -> Result<FamilyDto, SyncError> {
+        self.patch(&format!("/family/{family_id}"), &json!({ "name": name })).await
+    }
+
+    /// Deletes the family for everyone. Only the owner may call this.
+    pub async fn delete_family(&self, family_id: &str) -> Result<(), SyncError> {
+        self.no_content(self.http.delete(self.url(&format!("/family/{family_id}")))).await
+    }
+
+    /// Creates a single-use invite code. Only the family owner may call this.
     pub async fn create_invite(&self, family_id: &str) -> Result<InviteDto, SyncError> {
         self.post(&format!("/family/{family_id}/invites"), &json!({})).await
+    }
+
+    pub async fn revoke_invite(&self, family_id: &str, invite_id: &str) -> Result<(), SyncError> {
+        self.no_content(self.http.delete(self.url(&format!("/family/{family_id}/invites/{invite_id}")))).await
+    }
+
+    /// What a code leads to. Checking a code does not use it.
+    pub async fn preview_invite(&self, code: &str) -> Result<InvitePreview, SyncError> {
+        self.get(&format!("/invites/{code}")).await
+    }
+
+    /// Removes a member. Passing the caller's own id leaves the family.
+    pub async fn remove_member(&self, family_id: &str, user_id: &str) -> Result<(), SyncError> {
+        self.no_content(self.http.delete(self.url(&format!("/family/{family_id}/members/{user_id}")))).await
+    }
+
+    /// Hands ownership to another member. The caller becomes a regular member.
+    pub async fn transfer_ownership(&self, family_id: &str, user_id: &str) -> Result<(), SyncError> {
+        self.no_content(self.http.post(self.url(&format!("/family/{family_id}/owner"))).json(&json!({ "user_id": user_id })))
+            .await
     }
 
     pub async fn push(&self, request: &PushRequest) -> Result<PushResponse, SyncError> {
@@ -172,6 +208,25 @@ impl Api {
             Some(token) => request.bearer_auth(token),
             None => request,
         }
+    }
+
+    async fn get<T>(&self, path: &str) -> Result<T, SyncError>
+    where
+        T: for<'de> Deserialize<'de>,
+    {
+        let response = self
+            .authorized(self.http.get(self.url(path)))
+            .timeout(REQUEST_TIMEOUT)
+            .send()
+            .await
+            .map_err(transport)?;
+        read_json(check(response).await?).await
+    }
+
+    /// For endpoints that answer 204 No Content.
+    async fn no_content(&self, request: reqwest::RequestBuilder) -> Result<(), SyncError> {
+        let response = self.authorized(request).timeout(REQUEST_TIMEOUT).send().await.map_err(transport)?;
+        check(response).await.map(|_| ())
     }
 
     async fn post<B, T>(&self, path: &str, body: &B) -> Result<T, SyncError>

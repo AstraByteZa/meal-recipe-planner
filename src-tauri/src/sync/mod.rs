@@ -14,6 +14,7 @@ use crate::error::AppError;
 pub mod account;
 pub mod apply;
 pub mod client;
+pub mod family;
 pub mod outbox;
 pub mod worker;
 

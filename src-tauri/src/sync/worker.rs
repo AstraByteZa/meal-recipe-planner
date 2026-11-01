@@ -9,13 +9,14 @@ use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 use shared_core::entity::{EntityType, Operation};
-use shared_core::wire::{OpStatus, PushRequest, SyncOp};
+use shared_core::wire::{OpStatus, PushRequest, SseEvent, SyncOp};
 
 use crate::error::AppError;
 use crate::repo;
 use crate::sync::account::{self, Session};
 use crate::sync::apply;
 use crate::sync::client::{Api, SyncError};
+use crate::sync::family;
 use crate::sync::outbox::{self, Pending};
 use crate::sync::{SyncHandle, meta, set_meta, wait_or_timeout};
 
@@ -75,8 +76,8 @@ fn next_backoff(current: Duration) -> Duration {
     (current * 2).min(MAX_BACKOFF)
 }
 
-/// Runs one signed-in session: an initial sync, then a stream connection that pulls on each event
-/// and pushes on each local wake. Returns Ok only when a restart was requested.
+/// Runs one signed-in session: a family check, an initial sync, then a stream connection that pulls
+/// on each event and pushes on each local wake. Returns Ok only when a restart was requested.
 async fn session_loop(
     app: &AppHandle,
     pool: &SqlitePool,
@@ -86,6 +87,11 @@ async fn session_loop(
 ) -> Result<(), SyncError> {
     let api = Api::new(&session.server_url, Some(&session.token))?;
     outbox::requeue_in_flight(pool).await?;
+    // Before the first push, so queued rows leave under the family the server says this account
+    // is in, and not a family it has already left.
+    if family::reconcile(pool, &api).await? {
+        let _ = app.emit(CHANGED_EVENT, ());
+    }
 
     loop {
         sync_once(app, pool, handle, &api, session).await?;
@@ -102,7 +108,14 @@ async fn session_loop(
                     sync_once(app, pool, handle, &api, session).await?;
                 }
                 event = stream.next_event() => {
-                    event?;
+                    let event = event?;
+                    if event.kind == SseEvent::MEMBERSHIP_CHANGED && family::reconcile(pool, &api).await? {
+                        // The family changed here, so the stream must subscribe to the new set.
+                        // A restart reloads the session and connects again.
+                        let _ = app.emit(CHANGED_EVENT, ());
+                        handle.restart();
+                        return Ok(());
+                    }
                     sync_once(app, pool, handle, &api, session).await?;
                 }
             }

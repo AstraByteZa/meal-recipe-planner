@@ -5,7 +5,7 @@
 //! to an account but has no token, so it stops syncing and keeps its link. `signed_in` has a
 //! token and syncs. Changes made while `local` are not queued. Signing in queues them all.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{SqliteConnection, SqlitePool};
 
 use shared_core::entity::{EntityType, Operation};
@@ -15,7 +15,7 @@ use crate::error::AppError;
 use crate::sync::client::{Api, AuthResponse, FamilyDto};
 use crate::sync::outbox::{self, enqueue};
 use crate::sync::worker::LAST_SEQ_KEY;
-use crate::sync::{SyncHandle, USER_ID, active_family, clear_meta, client_id, meta, set_meta};
+use crate::sync::{SyncHandle, USER_ID, clear_meta, client_id, meta, set_meta};
 
 /// The server address built into the app, from `PLANNER_SYNC_SERVER_URL` at compile time. It
 /// pre-fills the server field. A server address the user saved wins over it.
@@ -25,14 +25,16 @@ const SERVER_URL: &str = "server_url";
 const TOKEN: &str = "token";
 const EMAIL: &str = "email";
 const DISPLAY_NAME: &str = "display_name";
-const FAMILY_ID: &str = "active_family_id";
-const FAMILY_NAME: &str = "active_family_name";
-const FAMILY_ROLE: &str = "active_family_role";
+pub(crate) const FAMILY_ID: &str = "active_family_id";
+pub(crate) const FAMILY_NAME: &str = "active_family_name";
+pub(crate) const FAMILY_ROLE: &str = "active_family_role";
 /// Invite codes used to be kept on the device. Only this key is still cleared.
-const FAMILY_INVITE: &str = "active_family_invite_code";
+pub(crate) const FAMILY_INVITE: &str = "active_family_invite_code";
+/// Set when this device was removed from a family, as JSON. Kept until the user dismisses it.
+pub(crate) const FAMILY_NOTICE: &str = "family_notice";
 
 /// Every synced table and the entity it sends as.
-const SYNCED_TABLES: [(&str, EntityType); 8] = [
+pub(crate) const SYNCED_TABLES: [(&str, EntityType); 8] = [
     ("tracks", EntityType::Track),
     ("tags", EntityType::Tag),
     ("recipes", EntityType::Recipe),
@@ -74,6 +76,8 @@ pub struct SyncStatus {
     /// Present only while signed in.
     pub user: Option<UserInfo>,
     pub family: Option<FamilyInfo>,
+    /// Set after this device was removed from its family, until the user dismisses it.
+    pub notice: Option<FamilyNotice>,
     /// Changes waiting to sync. Always 0 unless signed in, since nothing can sync otherwise.
     pub pending: i64,
     pub syncing: bool,
@@ -91,12 +95,21 @@ pub struct UserInfo {
     pub email: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FamilyInfo {
     pub id: String,
     pub name: String,
     pub role: FamilyRole,
+}
+
+/// Why this device left its family. `kind` is `removed` for now: the server does not say whether
+/// a family was deleted or the person was removed, so both read as removed.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FamilyNotice {
+    pub kind: String,
+    pub family_name: String,
 }
 
 /// The stored settings the status is built from, read in one pass.
@@ -107,6 +120,7 @@ struct Stored {
     email: Option<String>,
     display_name: Option<String>,
     family: Option<FamilyInfo>,
+    notice: Option<FamilyNotice>,
 }
 
 /// The session the worker runs with, or `None` while signed out.
@@ -144,6 +158,7 @@ pub async fn status(pool: &SqlitePool, handle: &SyncHandle) -> Result<SyncStatus
         default_server_url: default_server_url(),
         user,
         family: stored.family,
+        notice: stored.notice,
         pending,
         syncing: snapshot.syncing,
         last_synced_at: snapshot.last_synced_at,
@@ -153,24 +168,26 @@ pub async fn status(pool: &SqlitePool, handle: &SyncHandle) -> Result<SyncStatus
 }
 
 async fn read_stored(conn: &mut SqliteConnection) -> Result<Stored, AppError> {
-    let family = match (active_family(conn).await?, meta(conn, FAMILY_NAME).await?) {
-        // A family joined before roles existed has no stored role. Treat it as a member, the
-        // role that can do least. The next family refresh corrects it.
-        (Some(id), Some(name)) => Some(FamilyInfo {
-            id,
-            name,
-            role: meta(conn, FAMILY_ROLE).await?.as_deref().map_or(FamilyRole::Member, role_from_text),
-        }),
-        _ => None,
-    };
     Ok(Stored {
         token: meta(conn, TOKEN).await?,
         user_id: meta(conn, USER_ID).await?,
         server_url: meta(conn, SERVER_URL).await?,
         email: meta(conn, EMAIL).await?,
         display_name: meta(conn, DISPLAY_NAME).await?,
-        family,
+        family: active_family_info(conn).await?,
+        notice: meta(conn, FAMILY_NOTICE).await?.and_then(|json| serde_json::from_str(&json).ok()),
     })
+}
+
+/// The family this device is active in. Needs both the id and the name.
+pub(crate) async fn active_family_info(conn: &mut SqliteConnection) -> Result<Option<FamilyInfo>, AppError> {
+    let (Some(id), Some(name)) = (meta(conn, FAMILY_ID).await?, meta(conn, FAMILY_NAME).await?) else {
+        return Ok(None);
+    };
+    // A family joined before roles existed has no stored role. Treat it as a member, the role
+    // that can do least. The next family refresh corrects it.
+    let role = meta(conn, FAMILY_ROLE).await?.as_deref().map_or(FamilyRole::Member, role_from_text);
+    Ok(Some(FamilyInfo { id, name, role }))
 }
 
 /// Mode from the two facts that decide it: a token, and a linked account.
@@ -214,7 +231,7 @@ pub async fn login(pool: &SqlitePool, handle: &SyncHandle, server_url: &str, ema
 
 /// Stores the token and claims the local rows for the account. The worker reloads its session,
 /// so the first push and pull start straight away.
-async fn sign_in(pool: &SqlitePool, handle: &SyncHandle, server_url: &str, auth: AuthResponse) -> Result<SyncStatus, AppError> {
+pub(crate) async fn sign_in(pool: &SqlitePool, handle: &SyncHandle, server_url: &str, auth: AuthResponse) -> Result<SyncStatus, AppError> {
     let user_id = auth.user.id.to_string();
     let mut tx = pool.begin().await?;
     if let Some(owner) = meta(&mut *tx, USER_ID).await? {
@@ -295,6 +312,7 @@ pub async fn reset_to_local(pool: &SqlitePool, handle: &SyncHandle) -> Result<Sy
         FAMILY_NAME,
         FAMILY_ROLE,
         FAMILY_INVITE,
+        FAMILY_NOTICE,
     ] {
         clear_meta(&mut *tx, key).await?;
     }
@@ -335,20 +353,37 @@ pub async fn family_join(pool: &SqlitePool, handle: &SyncHandle, invite_code: &s
 /// passed it would never see it. Pulls are idempotent under LWW, so re-pulling is safe.
 async fn activate_family(pool: &SqlitePool, handle: &SyncHandle, family: &FamilyDto, rewind: bool) -> Result<SyncStatus, AppError> {
     let mut tx = pool.begin().await?;
-    set_meta(&mut *tx, FAMILY_ID, &family.id).await?;
-    set_meta(&mut *tx, FAMILY_NAME, &family.name).await?;
-    set_meta(&mut *tx, FAMILY_ROLE, role_text(family.role)).await?;
-    // Invite codes are per invite now and the owner creates them, so no code is kept here.
-    clear_meta(&mut *tx, FAMILY_INVITE).await?;
-    if rewind {
-        set_meta(&mut *tx, LAST_SEQ_KEY, "0").await?;
-    }
+    store_active(&mut *tx, family, rewind).await?;
     tx.commit().await?;
     handle.restart();
     status(pool, handle).await
 }
 
-fn role_text(role: FamilyRole) -> &'static str {
+/// Makes `family` the one that new rows join, and clears any notice about an earlier family. A
+/// rewind resets the pull cursor to 0. The server only sends a family's history to members who
+/// pull, so a member who has passed it would never see it. Pulls are idempotent under LWW.
+pub(crate) async fn store_active(conn: &mut SqliteConnection, family: &FamilyDto, rewind: bool) -> Result<(), AppError> {
+    set_meta(conn, FAMILY_ID, &family.id).await?;
+    set_meta(conn, FAMILY_NAME, &family.name).await?;
+    set_meta(conn, FAMILY_ROLE, role_text(family.role)).await?;
+    // Invite codes are per invite now and the owner creates them, so no code is kept here.
+    clear_meta(conn, FAMILY_INVITE).await?;
+    clear_meta(conn, FAMILY_NOTICE).await?;
+    if rewind {
+        set_meta(conn, LAST_SEQ_KEY, "0").await?;
+    }
+    Ok(())
+}
+
+/// Hides the notice about a removed family. The user has seen it.
+pub async fn dismiss_notice(pool: &SqlitePool, handle: &SyncHandle) -> Result<SyncStatus, AppError> {
+    let mut conn = pool.acquire().await?;
+    clear_meta(&mut conn, FAMILY_NOTICE).await?;
+    drop(conn);
+    status(pool, handle).await
+}
+
+pub(crate) fn role_text(role: FamilyRole) -> &'static str {
     match role {
         FamilyRole::Owner => "owner",
         FamilyRole::Member => "member",
@@ -359,7 +394,7 @@ fn role_from_text(text: &str) -> FamilyRole {
     if text == "owner" { FamilyRole::Owner } else { FamilyRole::Member }
 }
 
-async fn require_session(pool: &SqlitePool) -> Result<Session, AppError> {
+pub(crate) async fn require_session(pool: &SqlitePool) -> Result<Session, AppError> {
     session(pool)
         .await?
         .ok_or_else(|| AppError::Invalid("Sign in to sync before joining or creating a family.".to_string()))
